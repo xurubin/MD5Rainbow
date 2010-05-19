@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MD5Rainbow", "MD5Rainbow.vcxproj", "{C1549911-1AF6-4270-833C-751855334FCC}"
+EndProject
+Project("{4CAA2610-1955-4629-BDC1-8133FE0B2087}") = "profiling", "profiling\profiling.aqt", "{1850A0E9-510A-4D8C-804E-A95EAC7FAEEF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C1549911-1AF6-4270-833C-751855334FCC}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C1549911-1AF6-4270-833C-751855334FCC}.Debug|Win32.Build.0 = Debug|Win32
+		{C1549911-1AF6-4270-833C-751855334FCC}.Release|Win32.ActiveCfg = Release|Win32
+		{C1549911-1AF6-4270-833C-751855334FCC}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		VisualSVNWorkingCopyRoot = .
+	EndGlobalSection
+EndGlobal
