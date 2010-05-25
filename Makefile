@@ -16,9 +16,9 @@ MD5=md5-amd64
 DEFINES=$(INCLUDES) $(DEFS) -DSYS_UNIX=1 -U_FORTIFY_SOURCE
 CFLAGS=-O3 -g $(DEFINES) 
 
-SRCS = Alphabet.cpp ConfigFile.cpp DiskFile.cpp worker.cpp HashReduce.cpp main.cpp TableManager.cpp UIManager.cpp TableFile.cpp $(MD5).s
+SRCS = Alphabet.cpp ConfigFile.cpp DiskFile.cpp worker.cpp HashReduce.cpp main.cpp TableManager.cpp UIManager.cpp IndexFile.cpp $(MD5).s
 
-OBJS = Alphabet.o ConfigFile.o DiskFile.o worker.o HashReduce.o main.o TableManager.o UIManager.o TableFile.o $(MD5).o
+OBJS = Alphabet.o ConfigFile.o DiskFile.o worker.o HashReduce.o main.o TableManager.o UIManager.o IndexFile.o $(MD5).o
 
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c $<

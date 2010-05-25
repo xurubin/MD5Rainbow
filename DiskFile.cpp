@@ -5,24 +5,7 @@
 #include "UIManager.h"
 #include <string.h>
 #include <list>
-/*
-class IndexFile_Entry 
-{
-public:
-	unsigned long offset;
-	Index_Type hash;
-	IndexFile_Entry(){}
-	IndexFile_Entry(const IndexFile_Entry& i){offset = i.offset; hash = i.hash;}
-	IndexFile_Entry(int offset1,Index_Type hash1):offset(offset1), hash(hash1){}
-	
-};
-*/
 
-struct IndexFile_Entry 
-{
-	unsigned long int offset;
-	Index_Type hash;
-};
 
 CDiskFile::CDiskFile(void)
 {
@@ -46,6 +29,7 @@ bool CDiskFile::LoadTable(string TableName)
 	{
 		fclose(f);
 		filecount = 1;
+		files[0].type = IndexedFile;
 		return LoadPartFile(0, string(TableName+TABLEEXT).c_str());
 	} else //Enumerating all part files. 
 	{
@@ -266,6 +250,7 @@ bool CDiskFile::LoadPartFile(int index, const char* filename)
 	files[index].FileName = string(filename);
 	files[index].handle = f;
 	files[index].ReadOnly = true;
+	files[index].type = PartialFile;
 /*
 	struct __stat64 fstat; 
 	_fstat64(_fileno(f), &fstat);
@@ -620,33 +605,30 @@ void CDiskFile::Test(void)
 	CUIManager::getSingleton().RemoveGroup(gid);
 }
 
-int getbits(Index_Type x)
-{
-	int r =0;
-	while(x != 0) {x /=2; r++;}
-	return r;
-}
+
 void CDiskFile::CreateIndexedDatabase(void)
 {
-
 	Index_Type previous_hash = 0;
 	bool first = true;
 	ChainData chain;
 	char txtbuf[256];
 	char buf[32];
 	int i, TotalOffset=0;
-	vector<IndexFile_Entry> indexes;
+	unsigned int IntBuf;
+	int StartIndex_BitLength = 0;
+	list<Index_Type> startindexes;
 	IndexFile_Entry new_entry;
+
 	int gid = CUIManager::getSingleton().CreateGroup("Indexing");
 	IntVariable* i_var = CUIManager::getSingleton().RegisterIntVariable("Progress", &i, gid);
-	
-	int StartIndex_BitLength = 0;
-	int FinishHash_BitLength = 0;
-	int FileOffset_BitLength = 0;
-	int bits;
-	CUIManager::getSingleton().RegisterIntVariable("_StartIndex_BitLength", &StartIndex_BitLength, gid);
-	CUIManager::getSingleton().RegisterIntVariable("_FinishHash_BitLength", &FinishHash_BitLength, gid);
-	CUIManager::getSingleton().RegisterIntVariable("_FileOffset_BitLength", &FileOffset_BitLength, gid);
+
+	// Prepare out files
+	sprintf(txtbuf, "%s",string(TableName+TABLEEXT).c_str());
+	FILE* tablefile = fopen(txtbuf, "wb");
+
+	CIndexeFile& indexfile = files[0].indexfile;
+	indexfile.Clear();
+
 	for(int id=0;id<filecount;id++)
 	{
 		sprintf(txtbuf, "Indexing:Processing part file %d/%d", id+1,filecount);
@@ -654,7 +636,7 @@ void CDiskFile::CreateIndexedDatabase(void)
 		i_var->min = 0;
 		i_var->max = files[id].NumEntries;
 		i_var->style = Progress;
-		
+
 		fseek(files[id].handle, 0, SEEK_SET);
 
 		for(i=0;i<files[id].NumEntries;i++)
@@ -662,17 +644,22 @@ void CDiskFile::CreateIndexedDatabase(void)
 			if (fread(buf, BytesPerEntry, 1, files[id].handle) != 1)
 				CUIManager::getSingleton().PrintLn(-1, "Indexing: ReadFile failed");
 			UnpackChainData(buf, &chain);
-			
-			bits = getbits(chain.StartIndex);
-			if (bits > StartIndex_BitLength) StartIndex_BitLength = bits;
+
+			// Write out StartIndex_BitLength of chain.StartIndex
+			if(getbits(chain.StartIndex) > 32)
+				CUIManager::getSingleton().PrintLn(-1, "Fatal: StartIndex in the partfile is too big.");
+			IntBuf = chain.StartIndex & 0xFFFFFFFF;
+			fwrite(&IntBuf, 4, 1, tablefile);
+			StartIndex_BitLength =32;
 
 			if (first || (chain.FinishHash > previous_hash))
 			{
 				first = false;
 				new_entry.offset = TotalOffset+i;
 				new_entry.hash   = chain.FinishHash;
-				indexes.push_back(new_entry);
 				previous_hash = chain.FinishHash;
+
+				indexfile.AddEntries(&new_entry, 1);
 			}else if (chain.FinishHash < previous_hash)
 			{
 				sprintf(txtbuf, "Indexing: Unsorted input file(part%d) %lx %lx", id, previous_hash, chain.FinishHash);
@@ -681,38 +668,15 @@ void CDiskFile::CreateIndexedDatabase(void)
 		}
 		TotalOffset += files[id].NumEntries;
 	}
-	sprintf(txtbuf, "Indexing:Loaded %d entries", indexes.size());
+	sprintf(txtbuf, "Indexing:Loaded %d entries", startindexes.size());
 	CUIManager::getSingleton().PrintLn(gid, txtbuf);
 
-	IndexFile_Entry previous_entry = indexes.front();
-	FinishHash_BitLength=getbits(previous_entry.hash);
-	FileOffset_BitLength=getbits(previous_entry.offset);
-	for(vector<IndexFile_Entry>::iterator it = ++indexes.begin(); it != indexes.end(); it++)
-	{
-		IndexFile_Entry t = *it;
-		it->hash -= previous_entry.hash;
-		it->offset -= previous_entry.offset;
+	indexfile.SetStartIndexBits(StartIndex_BitLength);
+	indexfile.SaveFile(string(TableName+TABLEEXT+".index").c_str());
 
-		bits = getbits(it->hash);
-		if (bits > FinishHash_BitLength) FinishHash_BitLength = bits;
-		bits = getbits(it->offset);
-		if (bits > FileOffset_BitLength) FileOffset_BitLength = bits;
-
-		previous_entry = t;
-	}
-
-
-	CUIManager::getSingleton().PrintLn(gid, "Writing out index file");
-	sprintf(txtbuf, "%s.index",string(TableName+TABLEEXT).c_str());
-	FILE* indexfile = fopen(txtbuf, "wb");
-	for(vector<IndexFile_Entry>::iterator it = indexes.begin(); it != indexes.end(); it++)
-	{
-		fwrite(&(*it), sizeof(IndexFile_Entry), 1, indexfile);
-	}
-	fclose(indexfile);
-
-	CUIManager::getSingleton().PrintLn(-1, "Create Index file done.");
-	sprintf(txtbuf, "StartIndex:%d FinishHash:%d FileOffset:%d", StartIndex_BitLength, FinishHash_BitLength, FileOffset_BitLength);
-	CUIManager::getSingleton().PrintLn(-1, txtbuf);
+	fclose(tablefile);
+	CUIManager::getSingleton().PrintLn(-1, "Create Indexed file done.");
+	//sprintf(txtbuf, "StartIndex:%d FinishHash:%d FileOffset:%d", StartIndex_BitLength, FinishHash_BitLength, FileOffset_BitLength);
+	//CUIManager::getSingleton().PrintLn(-1, txtbuf);
 	CUIManager::getSingleton().RemoveGroup(gid);
 }

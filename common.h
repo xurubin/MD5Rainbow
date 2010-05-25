@@ -27,3 +27,12 @@ struct ChainData
 	Index_Type FinishHash;
 };
 
+
+#define BIT2BYTES(n)  ((n+7)/8)
+
+static int getbits(Index_Type x)
+{
+	int r =0;
+	while(x != 0) {x /=2; r++;}
+	return r;
+}

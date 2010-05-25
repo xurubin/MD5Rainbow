@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string>
 #include "pthread.h"
-#include "TableFile.h"
+#include "IndexFile.h"
 
 using namespace std;
 

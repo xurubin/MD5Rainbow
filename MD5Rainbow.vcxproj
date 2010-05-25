@@ -100,7 +100,7 @@
     <ClCompile Include="DiskFile.cpp" />
     <ClCompile Include="HashReduce.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="TableFile.cpp" />
+    <ClCompile Include="IndexFile.cpp" />
     <ClCompile Include="TableManager.cpp" />
     <ClCompile Include="UIManager.cpp" />
     <ClCompile Include="worker.cpp" />
@@ -122,7 +122,7 @@
     <ClInclude Include="DiskFile.h" />
     <ClInclude Include="HashReduce.h" />
     <ClInclude Include="md5.h" />
-    <ClInclude Include="TableFile.h" />
+    <ClInclude Include="IndexFile.h" />
     <ClInclude Include="TableManager.h" />
     <ClInclude Include="UIManager.h" />
     <ClInclude Include="worker.h" />
