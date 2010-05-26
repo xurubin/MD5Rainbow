@@ -64,4 +64,6 @@ private:
 public:
 	void Test(void);
 	void CreateIndexedDatabase(void);
+	int Lookup_PartFile(int i, Index_Type key, Index_Type* startindex);
+	int Lookup_IndexedFile(int i, Index_Type key, Index_Type* startindex);
 };

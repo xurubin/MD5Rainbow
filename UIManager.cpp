@@ -288,7 +288,7 @@ int IntVariable::Draw( double interval, int maxlen, char * Out )
 			int j;
 			for(j=0;j<(int)(bar_maxlen*percentage);j++)
 				Out[len+j] = '=';
-			Out[len+j] = (bar_maxlen*percentage-j <0.5) ? '>' : '-';
+			Out[len+j] = (bar_maxlen*percentage-j <0.5) ? '-' : '>';
 			Out[len+j+1] = '\0';
 			len = len+j;
 			break;

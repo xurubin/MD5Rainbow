@@ -27,10 +27,26 @@ bool CDiskFile::LoadTable(string TableName)
 	FILE* f = fopen(string(TableName+TABLEEXT).c_str(), "rb");
 	if (f) //Entire Table is Ready
 	{
-		fclose(f);
 		filecount = 1;
 		files[0].type = IndexedFile;
-		return LoadPartFile(0, string(TableName+TABLEEXT).c_str());
+		files[0].FileName = TableName+TABLEEXT;
+		files[0].handle = f;
+		files[0].ReadOnly = true;
+		files[0].Sorted = true;
+
+		files[0].indexfile.LoadFile(TableName+INDEXEXT);
+
+		struct stat stats;
+		stat(files[0].FileName.c_str(), &stats);
+		files[0].NumEntries = stats.st_size / BIT2BYTES(files[0].indexfile.GetStartIndexBits());
+		if ((stats.st_size % BIT2BYTES(files[0].indexfile.GetStartIndexBits()) != 0))
+		{
+			CUIManager::getSingleton().PrintLn(-1, "Inconsistent table file size.");
+			filecount = 0;
+			return false;
+		}
+		pthread_mutex_init(&files[0].mutex, 0);
+		return true;
 	} else //Enumerating all part files. 
 	{
 		filecount = 0;
@@ -65,7 +81,7 @@ int CDiskFile::AddContent(ChainData* data, int count)
 	{
 		if (i < filecount)
 		{
-			if (files[i].NumEntries < perfileentry_limit)
+			if ((files[i].type == PartialFile) && (files[i].NumEntries < perfileentry_limit))
 			{
 				int add_count = perfileentry_limit - files[i].NumEntries;
 				if (add_count > count ) add_count = count;
@@ -113,91 +129,132 @@ int CDiskFile::GetEntriesCount(void)
 
 int CDiskFile::Lookup(Index_Type key, Index_Type* startindex)
 {
-	struct timespec deltatime;
-	deltatime.tv_sec = 0;
-	deltatime.tv_nsec = 50*1000*1000;
 	int result = 0;
 
 	key = key & hash_mask;
 	for(int i=0;i<filecount;i++)
-	{
-		//Acquire mutex
-		while (pthread_mutex_timedlock(&files[i].mutex, &deltatime) != 0) ;
-
-		ChainData chain;
-		char buf[sizeof(ChainData)*2];
-		int st, ed;
-		if (files[i].Sorted) //Binary Search
-		{
-			st = 0;
-			ed = files[i].NumEntries - 1;
-			while(st <= ed)
-			{
-				int cur = (st+ed)/2;
-				fseek(files[i].handle, cur*BytesPerEntry, SEEK_SET);
-				fread(buf, BytesPerEntry, 1, files[i].handle);
-				UnpackChainData(buf, &chain);
-				if (key < chain.FinishHash)
-					ed = cur-1;
-				else if (key > chain.FinishHash)
-					st =cur+1;
-				else
-				{
-					//Store found chain
-					startindex[result++] = chain.StartIndex;
-					//Search backwards
-					st = cur-1;
-					while(st>=0)
-					{
-						fseek(files[i].handle, st*BytesPerEntry, SEEK_SET);
-						fread(buf, BytesPerEntry, 1, files[i].handle);
-						UnpackChainData(buf, &chain);
-						if (key == chain.FinishHash)
-						{
-							startindex[result++] = chain.StartIndex;
-							st--;
-						}
-						else
-							break;
-					}
-					//Search forwards
-					ed = cur+1;
-					while(ed<=files[i].NumEntries - 1)
-					{
-						fseek(files[i].handle, ed*BytesPerEntry, SEEK_SET);
-						fread(buf, BytesPerEntry, 1, files[i].handle);
-						UnpackChainData(buf, &chain);
-						if (key == chain.FinishHash)
-						{
-							startindex[result++] = chain.StartIndex;
-							ed++;
-						}
-						else
-							break;
-					}
-					break; //Done with this file, break out binary search loop
-				}
-			}
-		}
-		else //Sequential Search
-		{
-			fseek(files[i].handle, 0, SEEK_SET);
-			for(int j=0;j<files[i].NumEntries;j++)
-			{
-				fread(buf, BytesPerEntry, 1, files[i].handle);
-				UnpackChainData(buf, &chain);
-				if (chain.FinishHash == key)
-				{	
-					startindex[result++] = chain.StartIndex;
-				}
-			}
-		}
-
-		//Release mutex
-		pthread_mutex_unlock(&files[i].mutex);
-	}
+	{switch(files[i].type){
+	case PartialFile:
+		result += Lookup_PartFile(i, key, startindex+result);
+		break;
+	case IndexedFile:
+		result += Lookup_IndexedFile(i, key, startindex+result);
+		break;
+	}}
 	return result;
 }
+
+int CDiskFile::Lookup_PartFile(int i, Index_Type key, Index_Type* startindex)
+{
+	struct timespec deltatime;
+	deltatime.tv_sec = 0;
+	deltatime.tv_nsec = 50*1000*1000;
+	int result = 0;
+	//Acquire mutex
+	while (pthread_mutex_timedlock(&files[i].mutex, &deltatime) != 0) ;
+
+	ChainData chain;
+	char buf[sizeof(ChainData)*2];
+	int st, ed;
+	if (files[i].Sorted) //Binary Search
+	{
+		st = 0;
+		ed = files[i].NumEntries - 1;
+		while(st <= ed)
+		{
+			int cur = (st+ed)/2;
+			fseek(files[i].handle, cur*BytesPerEntry, SEEK_SET);
+			fread(buf, BytesPerEntry, 1, files[i].handle);
+			UnpackChainData(buf, &chain);
+			if (key < chain.FinishHash)
+				ed = cur-1;
+			else if (key > chain.FinishHash)
+				st =cur+1;
+			else
+			{
+				//Store found chain
+				startindex[result++] = chain.StartIndex;
+				//Search backwards
+				st = cur-1;
+				while(st>=0)
+				{
+					fseek(files[i].handle, st*BytesPerEntry, SEEK_SET);
+					fread(buf, BytesPerEntry, 1, files[i].handle);
+					UnpackChainData(buf, &chain);
+					if (key == chain.FinishHash)
+					{
+						startindex[result++] = chain.StartIndex;
+						st--;
+					}
+					else
+						break;
+				}
+				//Search forwards
+				ed = cur+1;
+				while(ed<=files[i].NumEntries - 1)
+				{
+					fseek(files[i].handle, ed*BytesPerEntry, SEEK_SET);
+					fread(buf, BytesPerEntry, 1, files[i].handle);
+					UnpackChainData(buf, &chain);
+					if (key == chain.FinishHash)
+					{
+						startindex[result++] = chain.StartIndex;
+						ed++;
+					}
+					else
+						break;
+				}
+			}
+		}
+	}
+	else //Sequential Search
+	{
+		fseek(files[i].handle, 0, SEEK_SET);
+		for(int j=0;j<files[i].NumEntries;j++)
+		{
+			fread(buf, BytesPerEntry, 1, files[i].handle);
+			UnpackChainData(buf, &chain);
+			if (chain.FinishHash == key)
+			{	
+				startindex[result++] = chain.StartIndex;
+			}
+		}
+	}
+
+	//Release mutex
+	pthread_mutex_unlock(&files[i].mutex);
+	return result;
+}
+int CDiskFile::Lookup_IndexedFile(int i, Index_Type key, Index_Type* startindex)
+{
+	int offset;
+	Index_Type buf;
+
+	int count = files[i].indexfile.LookupEntries(key, offset);
+	if (count == 0)
+		return 0;
+	count = (offset+count>files[i].NumEntries) ? files[i].NumEntries-offset : count;
+
+	struct timespec deltatime;
+	deltatime.tv_sec = 0;
+	deltatime.tv_nsec = 50*1000*1000;
+	int bytes = BIT2BYTES(files[i].indexfile.GetStartIndexBits());
+	Index_Type mask = (1L << files[i].indexfile.GetStartIndexBits())-1;
+	//Acquire mutex
+	while (pthread_mutex_timedlock(&files[i].mutex, &deltatime) != 0) ;
+	fseek(files[i].handle, bytes*offset, SEEK_SET);
+	for(int k=0;k<count;k++)
+	{
+		buf = 0;
+		fread(&buf, bytes, 1, files[i].handle);
+		buf &= mask;
+		startindex[k] = buf;
+	}
+	//Release mutex
+	pthread_mutex_unlock(&files[i].mutex);
+	return count;
+}
+
 
 bool CDiskFile::IsFileSorted(int index)
 {
@@ -249,7 +306,7 @@ bool CDiskFile::LoadPartFile(int index, const char* filename)
 		return false;
 	files[index].FileName = string(filename);
 	files[index].handle = f;
-	files[index].ReadOnly = true;
+	files[index].ReadOnly = false;
 	files[index].type = PartialFile;
 /*
 	struct __stat64 fstat; 
@@ -672,7 +729,7 @@ void CDiskFile::CreateIndexedDatabase(void)
 	CUIManager::getSingleton().PrintLn(gid, txtbuf);
 
 	indexfile.SetStartIndexBits(StartIndex_BitLength);
-	indexfile.SaveFile(string(TableName+TABLEEXT+".index").c_str());
+	indexfile.SaveFile(string(TableName+INDEXEXT).c_str());
 
 	fclose(tablefile);
 	CUIManager::getSingleton().PrintLn(-1, "Create Indexed file done.");
@@ -680,3 +737,4 @@ void CDiskFile::CreateIndexedDatabase(void)
 	//CUIManager::getSingleton().PrintLn(-1, txtbuf);
 	CUIManager::getSingleton().RemoveGroup(gid);
 }
+

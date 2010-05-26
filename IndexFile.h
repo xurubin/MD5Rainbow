@@ -25,6 +25,7 @@ public:
 
 	void SetStartIndexBits(int bits) { startindex_bits = bits;}
 	int GetStartIndexBits() { return startindex_bits;}
+	int GetNumEntries() { return entries.size(); }
 private:
 	int PackIndexEntry(IndexFile_Entry& entry, char* buf);
 	int UnpackIndexEntry(IndexFile_Entry& entry, char* buf);

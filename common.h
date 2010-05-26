@@ -2,6 +2,7 @@
 
 #define CONFIGEXT ".ini"
 #define TABLEEXT ".rnb"
+#define INDEXEXT ".rnb.index"
 #define MAXSIZE_TMPTABLE_GUIDELINE (64*1024*1024)
 #define MERGESORT_MEMORY 256*1024*1024
 

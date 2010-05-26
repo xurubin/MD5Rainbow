@@ -33,7 +33,7 @@ bool CIndexeFile::LoadFile(string filename)
 	struct stat stats;
 	stat(filename.c_str(), &stats);
 
-	FILE* indexfile = fopen(filename.c_str(), "wb");
+	FILE* indexfile = fopen(filename.c_str(), "rb");
 	fread(buf, sizeof(int), 3, indexfile);
 	startindex_bits = ((int*)buf)[0] ;
 	finishhash_bits = ((int*)buf)[1] ;
@@ -77,6 +77,12 @@ bool CIndexeFile::SaveFile(string filename)
 	int FinishHash_BitLength = 0;
 	int FileOffset_BitLength = 0;
 	int bits;
+	int gid = CUIManager::getSingleton().CreateGroup("Indexing");
+	int progress = 0;
+	IntVariable* progress_var = CUIManager::getSingleton().RegisterIntVariable("Saving Index file", &progress, gid);
+	progress_var->style = Progress;
+	progress_var->min = 0;
+	progress_var->max = 2*entries.size();
 	//CUIManager::getSingleton().RegisterIntVariable("_FinishHash_BitLength", &FinishHash_BitLength, gid);
 	//CUIManager::getSingleton().RegisterIntVariable("_FileOffset_BitLength", &FileOffset_BitLength, gid);
 
@@ -84,7 +90,8 @@ bool CIndexeFile::SaveFile(string filename)
 	FinishHash_BitLength=getbits(previous_entry.hash);
 	FileOffset_BitLength=getbits(previous_entry.offset);
 	for(EntryList::iterator it = ++entries.begin(); it != entries.end(); it++)
-	{
+	{	
+		progress++;
 		IndexFile_Entry t = *it;
 		it->hash -= previous_entry.hash;
 		it->offset -= previous_entry.offset;
@@ -111,6 +118,7 @@ bool CIndexeFile::SaveFile(string filename)
 	int entry_bytes = BIT2BYTES(finishhash_bits+fileoffset_bits);
 	for(EntryList::iterator it = entries.begin(); it != entries.end(); it++)
 	{
+		progress++;
 		PackIndexEntry(*it, buf);
 		fwrite(buf, entry_bytes, 1, indexfile);
 	}
@@ -136,6 +144,25 @@ int CIndexeFile::AddEntries(IndexFile_Entry* entries, int count)
 
 int CIndexeFile::LookupEntries(Index_Type hash, int& offset)
 {
+	int i=0;
+	int j=entries.size()-1;
+	while(i<=j)
+	{
+		int mid = (i+j)/2;
+		if (hash > entries[mid].hash)
+			i = mid+1;
+		else if (hash < entries[mid].hash)
+			j = mid-1;
+		if (hash == entries[mid].hash)
+		{
+			offset = entries[mid].offset;
+			if(mid<(int)entries.size()-1)
+				return entries[mid+1].offset-entries[mid].offset;
+			else
+				return 0x7fffffff;
+
+		}
+	}
 	return 0;
 }
 

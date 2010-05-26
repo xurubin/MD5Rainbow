@@ -101,6 +101,7 @@ void CTableManager::Generate(int NumThreads)
 			break;
 		default:;
 		}
+		SynchronizeConfigFile(true);
 	}
 }
 
