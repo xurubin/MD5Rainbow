@@ -204,6 +204,7 @@ int CDiskFile::Lookup_PartFile(int i, Index_Type key, Index_Type* startindex)
 					else
 						break;
 				}
+				break;
 			}
 		}
 	}
@@ -491,6 +492,13 @@ void CDiskFile::MergeSortAll(void)
 	for(int i=0;i<filecount;i++)
 		delete inbuf[i];
 
+	for(int i=0;i<filecount;i++)
+	{
+		sprintf(txtbuf, "%s.merged%d",string(TableName+TABLEEXT).c_str(), i);
+		files[i].FileName = string(txtbuf);
+		fclose(files[i].handle);
+		files[i].handle = fopen(files[i].FileName.c_str(), "rb");
+	}
 	CUIManager::getSingleton().PrintLn(-1, "MergeSort done.");
 }
 
@@ -673,9 +681,13 @@ void CDiskFile::CreateIndexedDatabase(void)
 	int i, TotalOffset=0;
 	unsigned int IntBuf;
 	int StartIndex_BitLength = 0;
-	list<Index_Type> startindexes;
 	IndexFile_Entry new_entry;
 
+	if (files[0].type == IndexedFile)
+	{
+		CUIManager::getSingleton().PrintLn(-1, "File already indexed.");
+		return;
+	}
 	int gid = CUIManager::getSingleton().CreateGroup("Indexing");
 	IntVariable* i_var = CUIManager::getSingleton().RegisterIntVariable("Progress", &i, gid);
 
@@ -725,7 +737,7 @@ void CDiskFile::CreateIndexedDatabase(void)
 		}
 		TotalOffset += files[id].NumEntries;
 	}
-	sprintf(txtbuf, "Indexing:Loaded %d entries", startindexes.size());
+	sprintf(txtbuf, "Indexing:Loaded %d entries", indexfile.GetNumEntries());
 	CUIManager::getSingleton().PrintLn(gid, txtbuf);
 
 	indexfile.SetStartIndexBits(StartIndex_BitLength);

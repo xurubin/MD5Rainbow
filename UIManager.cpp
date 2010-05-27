@@ -109,6 +109,7 @@ void CUIManager::Internal_Handler(void)
 			
 			lines +=group_height;
 		}
+		//TODO: Clear old lines
 		pthread_mutex_unlock(&mutex);
 	
 

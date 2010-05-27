@@ -1,6 +1,7 @@
 #include "IndexFile.h"
 #include "UIManager.h"
 #include <sys/stat.h>
+#include "stdint.h"
 /*
 CTableFile::CTableFile(void)
 {
@@ -33,21 +34,28 @@ bool CIndexeFile::LoadFile(string filename)
 	struct stat stats;
 	stat(filename.c_str(), &stats);
 
+	CUIManager::getSingleton().PrintLn(-1, "Loading index file.");
+	int gid = CUIManager::getSingleton().CreateGroup("Loading");
+	int progress = 0;
+	IntVariable* progress_var = CUIManager::getSingleton().RegisterIntVariable("Loading Index file", &progress, gid);
+	progress_var->style = Progress;
+	progress_var->min = 0;
 	FILE* indexfile = fopen(filename.c_str(), "rb");
-	fread(buf, sizeof(int), 3, indexfile);
-	startindex_bits = ((int*)buf)[0] ;
-	finishhash_bits = ((int*)buf)[1] ;
-	fileoffset_bits = ((int*)buf)[2] ;
+	fread(buf, sizeof(uint32_t), 3, indexfile);
+	startindex_bits = ((uint32_t*)buf)[0] ;
+	finishhash_bits = ((uint32_t*)buf)[1] ;
+	fileoffset_bits = ((uint32_t*)buf)[2] ;
 	int entry_bytes = BIT2BYTES(finishhash_bits+fileoffset_bits);
 
-	int num_entries = (int)((stats.st_size-3*sizeof(int)) / entry_bytes);
-	if ((stats.st_size-3*sizeof(int)) % entry_bytes != 0)
+	int num_entries = (int)((stats.st_size-3*sizeof(uint32_t)) / entry_bytes);
+	if ((stats.st_size-3*sizeof(uint32_t)) % entry_bytes != 0)
 		CUIManager::getSingleton().PrintLn(-1, "Index file size incorrect!");
 
 	IndexFile_Entry entry, prev_entry; 
 	bool first = true;
 	entries.clear();
-	for(int i=0;i<num_entries;i++)
+	progress_var->max = num_entries;
+	for(progress=0;progress<num_entries;progress++)
 	{
 		fread(buf, entry_bytes,1, indexfile);
 		UnpackIndexEntry(entry, buf);
@@ -62,6 +70,7 @@ bool CIndexeFile::LoadFile(string filename)
 	}
 
 	fclose(indexfile);
+	CUIManager::getSingleton().RemoveGroup(gid);
 	return true;
 }
 
@@ -110,10 +119,10 @@ bool CIndexeFile::SaveFile(string filename)
 	//CUIManager::getSingleton().PrintLn(gid, "Writing out index file");
 
 	FILE* indexfile = fopen(filename.c_str(), "wb");
-	((int*)buf)[0] = startindex_bits;
-	((int*)buf)[1] = finishhash_bits;
-	((int*)buf)[2] = fileoffset_bits;
-	fwrite(buf, sizeof(int), 3, indexfile);
+	((uint32_t*)buf)[0] = startindex_bits;
+	((uint32_t*)buf)[1] = finishhash_bits;
+	((uint32_t*)buf)[2] = fileoffset_bits;
+	fwrite(buf, sizeof(uint32_t), 3, indexfile);
 
 	int entry_bytes = BIT2BYTES(finishhash_bits+fileoffset_bits);
 	for(EntryList::iterator it = entries.begin(); it != entries.end(); it++)
@@ -128,8 +137,6 @@ bool CIndexeFile::SaveFile(string filename)
 	//sprintf(txtbuf, "StartIndex:%d FinishHash:%d FileOffset:%d", StartIndex_BitLength, FinishHash_BitLength, FileOffset_BitLength);
 	//CUIManager::getSingleton().PrintLn(-1, txtbuf);
 	//CUIManager::getSingleton().RemoveGroup(gid);
-
-	entries.clear();
 	return true;
 }
 
@@ -153,7 +160,7 @@ int CIndexeFile::LookupEntries(Index_Type hash, int& offset)
 			i = mid+1;
 		else if (hash < entries[mid].hash)
 			j = mid-1;
-		if (hash == entries[mid].hash)
+		else //if (hash == entries[mid].hash)
 		{
 			offset = entries[mid].offset;
 			if(mid<(int)entries.size()-1)

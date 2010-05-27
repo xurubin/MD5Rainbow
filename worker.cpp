@@ -106,14 +106,16 @@ void rainbow_lookup(LookupTaskInfo* task)
 	SetThreadPriority(GetCurrentThread(), THREAD_BASE_PRIORITY_IDLE);
 #endif
 	int gid = task->UIGroup;
+	int progress = 0;
 	char varname[20]; sprintf(varname, "Progress%d", task->WorkerID);
-	IntVariable* visualiser = CUIManager::getSingleton().RegisterIntVariable(varname, &chain_position, gid);
-	visualiser->min = task->StartChainLen;
-	visualiser->max = task->EndChainLen;
+	IntVariable* visualiser = CUIManager::getSingleton().RegisterIntVariable(varname, &progress, gid);
+	visualiser->min = 0;
+	visualiser->max = (task->EndChainLen+task->StartChainLen)*(task->EndChainLen-task->StartChainLen)/2;
 	visualiser->style = Progress;
 
 	for(chain_position=task->StartChainLen; chain_position<=task->EndChainLen; chain_position++)
 	{
+		progress+= chain_position;
 		if (*(task->terminating))
 			break;
 		for(int j=0;j<sizeof(hash_digest);j++) hash_digest[j] = task->hash[j];

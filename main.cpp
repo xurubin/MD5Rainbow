@@ -10,6 +10,9 @@ int main(int argc, char* argv[])
 {
 	CTableManager table;
 	CUIManager::getSingleton();
+	pthread_t pid;
+	pthread_create(&pid, 0, (void *(*)(void *))CUIManager::Handler, 0);
+
 	if (!CMD5HashReduce::SelfTest())
 		CUIManager::getSingleton().PrintLn(-1, "Warning: Hash algorithm self check failed!\n");
 
@@ -26,17 +29,15 @@ int main(int argc, char* argv[])
 
 		if (!table.LoadTable(argv[2]))
 		{
-			printf("Table with name %s does not exist or config file contains error.\n", argv[2]);
+			CUIManager::getSingleton().PrintLn(-1,"Table with name %s does not exist or config file contains error.\n");
 			return 1;
 		}
 		table.DisplayDescription();
-		pthread_t pid;
-		pthread_create(&pid, 0, (void *(*)(void *))CUIManager::Handler, 0);
 		table.Generate(atoi(argv[3]));
 		goto wait_for_terminate;
 	}else if (strcmp(argv[1], "lookup") == 0)
 	{
-		if (argc != 5) goto display_usage;
+		if (argc != 4) goto display_usage;
 
 		if (!table.LoadTable(argv[2]))
 		{
@@ -44,16 +45,22 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		table.DisplayDescription();
-		pthread_t pid;
-		pthread_create(&pid, 0, (void *(*)(void *))CUIManager::Handler, 0);
-		table.Lookup(argv[3], atoi(argv[4]));
+		char line[128];
+		do 
+		{
+			CUIManager::getSingleton().PrintLn(-1, "Input target MD5 hash:");
+			if (!gets(line)) break;
+			line[32] = '\0';
+			if (strlen(line) != 32) break;
+			table.Lookup(line, atoi(argv[3]));
+		} while (true);
 		goto wait_for_terminate;
 	}
 
 display_usage:
 	CUIManager::getSingleton().PrintLn(-1, "Usage: MD5Rainbow create   <tablename>\n");
 	CUIManager::getSingleton().PrintLn(-1, "Usage: MD5Rainbow generate <tablename> NumCores\n");
-	CUIManager::getSingleton().PrintLn(-1, "Usage: MD5Rainbow lookup   <tablename> <md5hash> NumCores\n");
+	CUIManager::getSingleton().PrintLn(-1, "Usage: MD5Rainbow lookup   <tablename> NumCores\n");
 wait_for_terminate:
 	char c;
 	CUIManager::getSingleton().PrintLn(-1, "Press any key to exit.");
