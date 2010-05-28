@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 		do 
 		{
 			CUIManager::getSingleton().PrintLn(-1, "Input target MD5 hash:");
-			if (!gets(line)) break;
+			if (!fgets(line, sizeof(line),stdin)) break;
 			line[32] = '\0';
 			if (strlen(line) != 32) break;
 			table.Lookup(line, atoi(argv[3]));
