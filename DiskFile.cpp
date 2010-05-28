@@ -240,7 +240,7 @@ int CDiskFile::Lookup_IndexedFile(int i, Index_Type key, Index_Type* startindex)
 	deltatime.tv_sec = 0;
 	deltatime.tv_nsec = 50*1000*1000;
 	int bytes = BIT2BYTES(files[i].indexfile.GetStartIndexBits());
-	Index_Type mask = (1L << files[i].indexfile.GetStartIndexBits())-1;
+	Index_Type mask = ((unsigned long long)1 << files[i].indexfile.GetStartIndexBits())-1;
 	//Acquire mutex
 	while (pthread_mutex_timedlock(&files[i].mutex, &deltatime) != 0) ;
 	fseek(files[i].handle, bytes*offset, SEEK_SET);

@@ -184,18 +184,17 @@ int CIndexeFile::Clear(void)
 
 int CIndexeFile::PackIndexEntry(IndexFile_Entry& entry, char* buf)
 {
+	int entry_bytes = BIT2BYTES(finishhash_bits+fileoffset_bits);
 	unsigned long long d = entry.hash;
 	d <<= fileoffset_bits;
 	d |= entry.offset;
 	int r = 0;
-	while(d>0)
+	for(int i=0;i<entry_bytes;i++)
 	{
-		buf[0] = (char)(d & 0xFF);
+		buf[i] = (char)(d & 0xFF);
 		d >>= 8;
-		buf++;
-		r++;
 	}
-	return r;
+	return entry_bytes;
 }
 int CIndexeFile::UnpackIndexEntry(IndexFile_Entry& entry, char* buf)
 {
@@ -206,7 +205,7 @@ int CIndexeFile::UnpackIndexEntry(IndexFile_Entry& entry, char* buf)
 		d <<= 8;
 		d |= (buf[i] & 0xFF);
 	}
-	entry.offset = (d & ((1L << fileoffset_bits)-1));
-	entry.hash = ((d >> fileoffset_bits) & ((1L << finishhash_bits)-1));
+	entry.offset = (d & (((unsigned long long)1 << fileoffset_bits)-1));
+	entry.hash = ((d >> fileoffset_bits) & (((unsigned long long)1 << finishhash_bits)-1));
 	return entry_bytes;
 }
