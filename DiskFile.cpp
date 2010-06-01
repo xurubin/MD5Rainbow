@@ -329,7 +329,7 @@ bool CDiskFile::LoadPartFile(int index, const char* filename)
 
 bool CDiskFile::WriteToFile(int index, ChainData* data, int count)
 {
-	char buf[16384];
+	char buf[8192];
 	int buf_len;
 	int count2 = count;
 	while(count>0)
@@ -379,11 +379,10 @@ bool CDiskFile::IsMergedFilesValid(void)
 }
 void CDiskFile::MergeSortAll(void)
 {
-	int i;
 	char message[256];
 	CUIManager::getSingleton().PrintLn(-1, "Sorting individual part files...");
 	//Sort individual part files
-	for(i=0;i<filecount;i++)
+	for(int i=0;i<filecount;i++)
 	{
 		if (files[i].Sorted)
 			continue;
@@ -408,7 +407,7 @@ void CDiskFile::MergeSortAll(void)
 	char txtbuf[1024];
 
 	outbuf = new char[buf_maxitems*BytesPerEntry];
-	for(i=0;i<filecount;i++)
+	for(int i=0;i<filecount;i++)
 	{
 		inbuf[i] = new char[buf_maxitems*BytesPerEntry];
 		inbuf_entries[i] = inbuf_pointers[i] = 0;
@@ -419,7 +418,7 @@ void CDiskFile::MergeSortAll(void)
 	{
 		notfinished = false;
 		//First step - fill in empty inbuf
-		for(i=0;i<filecount;i++)
+		for(int i=0;i<filecount;i++)
 			if (inbuf_pointers[i] >= inbuf_entries[i])
 			{
 				inbuf_pointers[i] = 0;

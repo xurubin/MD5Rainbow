@@ -107,13 +107,20 @@ void rainbow_lookup(LookupTaskInfo* task)
 #endif
 	int gid = task->UIGroup;
 	int progress = 0;
-	char varname[20]; sprintf(varname, "Progress%d", task->WorkerID);
-	IntVariable* visualiser = CUIManager::getSingleton().RegisterIntVariable(varname, &progress, gid);
-	visualiser->min = 0;
-	visualiser->max = (task->EndChainLen+task->StartChainLen)*(task->EndChainLen-task->StartChainLen)/2;
-	visualiser->style = Progress;
+	//char progressname[20]; 
+	//sprintf(progressname, "Progress%d", task->WorkerID);
+	//IntVariable* visualiser = CUIManager::getSingleton().RegisterIntVariable(progressname, &progress, gid);
+	//visualiser->min = 0;
+	//visualiser->max = (task->EndChainLen+task->StartChainLen)*(task->EndChainLen-task->StartChainLen)/2;
+	//visualiser->style = Progress;
 
-	for(chain_position=task->StartChainLen; chain_position<=task->EndChainLen; chain_position++)
+	int falsealarms = 0;
+	char falsealarmname[20];
+	sprintf(falsealarmname, "False Alarm %d", task->WorkerID);
+	CUIManager::getSingleton().RegisterIntVariable(falsealarmname, &falsealarms, gid);
+
+	//for(chain_position=task->StartChainLen; chain_position<=task->EndChainLen; chain_position++)
+	while((chain_position=task->jobpool->GetNextJob()) >= 0)
 	{
 		progress+= chain_position;
 		if (*(task->terminating))
@@ -166,6 +173,7 @@ void rainbow_lookup(LookupTaskInfo* task)
 				if (hash_digest[j] != task->hash[j])
 				{
 					falsepositive = true;
+					falsealarms++;
 					break;
 				}
 			if (!falsepositive)
@@ -183,5 +191,43 @@ void rainbow_lookup(LookupTaskInfo* task)
 		}
 		if (found_match) break;
 	}
-	CUIManager::getSingleton().UnregisterVariable(gid, varname);
+	//CUIManager::getSingleton().UnregisterVariable(gid, progressname);
+	CUIManager::getSingleton().UnregisterVariable(gid, falsealarmname);
+}
+
+CLookupJobPool::CLookupJobPool()
+{
+	pthread_mutex_init(&mutex, NULL);
+	min=max=0;
+}
+
+CLookupJobPool::~CLookupJobPool()
+{
+	CUIManager::getSingleton().UnregisterVariable(gid, "Progress");
+	pthread_mutex_destroy(&mutex);
+}
+
+void CLookupJobPool::SetJobs( int min, int max )
+{
+	this->min = min;
+	this->max = max;
+	v =min;
+	gid = CUIManager::getSingleton().CreateGroup("Lookup");
+	CUIManager::getSingleton().UnregisterVariable(gid, "Progress");
+	IntVariable* var = CUIManager::getSingleton().RegisterIntVariable("Progress", &v, gid);
+	var->max = max;
+	var->min = min;
+	var->style = Progress;
+}
+
+int CLookupJobPool::GetNextJob()
+{
+	int r;
+	pthread_mutex_lock(&mutex);
+	if (v>max)
+		r =  -1;
+	else
+		r =  v++;
+	pthread_mutex_unlock(&mutex);
+	return r;
 }

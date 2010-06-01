@@ -97,12 +97,14 @@
   <ItemGroup>
     <ClCompile Include="Alphabet.cpp" />
     <ClCompile Include="ConfigFile.cpp" />
+    <ClCompile Include="ConsoleUIManager.cpp" />
     <ClCompile Include="DiskFile.cpp" />
     <ClCompile Include="HashReduce.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="IndexFile.cpp" />
     <ClCompile Include="TableManager.cpp" />
     <ClCompile Include="UIManager.cpp" />
+    <ClCompile Include="WindowUIManager.cpp" />
     <ClCompile Include="worker.cpp" />
   </ItemGroup>
   <ItemGroup>

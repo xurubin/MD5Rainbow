@@ -51,7 +51,7 @@ public:
 	CUIManager(void);
 	~CUIManager(void);
 	static CUIManager& getSingleton(void);
-private:
+protected:
 	static CUIManager* instance;
 	GroupCollection groups;
 	FILE* console_out;
@@ -60,9 +60,7 @@ private:
 	int group_height;
 	double refresh_interval;
 	int allocate_handle(void);
-	void Internal_Handler(void);
-	void PrintVariableLine(VariableCollection::iterator var, double interval);
-	void PrintLogLine( StringList::iterator log );
+	virtual void Internal_Handler(void) = 0;
 public:
 	static void Handler(void);
 	
@@ -76,4 +74,22 @@ public:
 
 	void PrintLn(int group, string line, bool raw = true);
 	void ClearLogLines(int group);
+};
+
+class CConsoleUIManager : public CUIManager
+{
+protected:
+	void PrintVariableLine(VariableCollection::iterator var, double interval);
+	void PrintLogLine( StringList::iterator log );
+	virtual void Internal_Handler(void);
+};
+
+class CWindowUIManager : public CUIManager
+{
+public:
+	void RefreshUI( long delta );
+protected:
+	void PrintVariableLine(VariableCollection::iterator var, double interval);
+	void PrintLogLine( StringList::iterator log );
+	virtual void Internal_Handler(void);
 };

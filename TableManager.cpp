@@ -289,6 +289,8 @@ bool CTableManager::Lookup(string hash_str, int NumThreads)
 	int gid = CUIManager::getSingleton().CreateGroup("Lookup");
 	CUIManager::getSingleton().ClearGroup(gid);
 	bool terminating = false;
+	CLookupJobPool lookupjob;
+	lookupjob.SetJobs(0, ChainLength-1);
 	for(int i=0;i<NumThreads;i++)
 	{
 		tasks[i].WorkerID = i;
@@ -296,6 +298,7 @@ bool CTableManager::Lookup(string hash_str, int NumThreads)
 		tasks[i].hash = hash;
 		tasks[i].UIGroup = gid;
 		tasks[i].terminating = &terminating;
+		tasks[i].jobpool = &lookupjob;
 		if (i==0)
 			tasks[i].StartChainLen = 0;
 		else
