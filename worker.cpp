@@ -182,7 +182,7 @@ void rainbow_lookup(LookupTaskInfo* task)
 				char found_text[1024];
 				found_match = true;
 				*(task->terminating) = true;
-				sprintf(found_text, "Worker %d - Found: %s\n", task->WorkerID, hash_buf);
+				sprintf(found_text, "Worker %d - Found: %s", task->WorkerID, hash_buf);
 				CUIManager::getSingleton().PrintLn(-1, string(found_text), false);
 				CUIManager::getSingleton().PrintLn(gid, string(found_text), false);
 				break; //Found the real one so no need to check other possible matches
@@ -212,11 +212,13 @@ void CLookupJobPool::SetJobs( int min, int max )
 	this->min = min;
 	this->max = max;
 	v =min;
+
+	progress = 0;
 	gid = CUIManager::getSingleton().CreateGroup("Lookup");
 	CUIManager::getSingleton().UnregisterVariable(gid, "Progress");
-	IntVariable* var = CUIManager::getSingleton().RegisterIntVariable("Progress", &v, gid);
-	var->max = max;
-	var->min = min;
+	IntVariable* var = CUIManager::getSingleton().RegisterIntVariable("Progress", &progress, gid);
+	var->max = (max-min)*(max+min)/2;
+	var->min = 0;
 	var->style = Progress;
 }
 
@@ -228,6 +230,7 @@ int CLookupJobPool::GetNextJob()
 		r =  -1;
 	else
 		r =  v++;
+	progress += r;
 	pthread_mutex_unlock(&mutex);
 	return r;
 }

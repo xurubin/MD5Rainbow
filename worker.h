@@ -13,6 +13,7 @@ public:
 private:
 	pthread_mutex_t mutex;
 	int v, min, max;
+	int progress;
 	int gid;
 };
 
