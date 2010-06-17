@@ -21,8 +21,11 @@ CUIManager::~CUIManager(void)
 CUIManager& CUIManager::getSingleton(void)
 {
 	if (instance == 0)
+#ifdef WIN32
 		instance = new CWindowUIManager();
-		//instance = new CConsoleUIManager();
+#else
+		instance = new CConsoleUIManager();
+#endif
 	return *instance;
 }
 

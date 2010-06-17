@@ -396,14 +396,14 @@ int IntVariable::DrawWindow(double interval, int x, int y, int width, HDC dc)
 		if((*value>=min)&&(*value<=max))
 		{
 			double percentage = ((double)*value - min) / (max-min);
-			len = (int)(width * percentage);
+			len = (int)((width-2) * percentage);
 			RECT rect;
 			rect.left = x;
 			rect.top = y;
 			rect.right = x+width;
 			rect.bottom = y+BAR_HEIGHT;
 			FillRect(BufferDC, &rect, (HBRUSH)(COLOR_ACTIVECAPTION + 1));
-			rect.left = x+len;
+			rect.left = x+1+len;
 			rect.top = y+1;
 			rect.bottom --;
 			rect.right --;
