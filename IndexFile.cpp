@@ -79,7 +79,6 @@ bool CIndexeFile::SaveFile(string filename)
 {
 	Index_Type previous_hash = 0;
 	bool first = true;
-	char txtbuf[256];
 	char buf[32];
 	int TotalOffset=0;
 
