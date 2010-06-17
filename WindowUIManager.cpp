@@ -71,8 +71,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	hInst = hInstance; // Store instance handle in our global variable
 
-	hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
+	hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
+		CW_USEDEFAULT, 0, 500, 600, NULL, NULL, hInstance, NULL);
 
 	if (!hWnd)
 	{
@@ -82,11 +82,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	HDC dc = GetWindowDC(hWnd);
 	GetClientRect(hWnd, &BufferRect);
 	BufferDC = CreateCompatibleDC(dc);
-	BufferBitmap = CreateCompatibleBitmap(BufferDC, BufferRect.right-BufferRect.left, BufferRect.bottom-BufferRect.top);
+	BufferBitmap = CreateCompatibleBitmap(dc, BufferRect.right-BufferRect.left, BufferRect.bottom-BufferRect.top);
 	SelectObject(BufferDC, BufferBitmap);
 	ReleaseDC(hWnd, dc);
 
-	SetTimer(hWnd, 1, 500, NULL);
+	SetTimer(hWnd, 1, 200, NULL);
 
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
@@ -110,7 +110,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	PAINTSTRUCT ps;
 	HDC hdc;
 	long t0 = 0;
-	//CWindowUIManager& uim = (CWindowUIManager)(CUIManager::getSingleton());
+	CWindowUIManager* uim = (CWindowUIManager*)(&CUIManager::getSingleton());
 
 	switch (message)
 	{
@@ -118,17 +118,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		wmId    = LOWORD(wParam);
 		wmEvent = HIWORD(wParam);
 		// Parse the menu selections:
-		switch (wmId)
-		{
+		//switch (wmId)
+		//{
 		//case IDM_ABOUT:
 		//	DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
 		//	break;
 		//case IDM_EXIT:
 		//	DestroyWindow(hWnd);
 		//	break;
-		default:
-			return DefWindowProc(hWnd, message, wParam, lParam);
-		}
+		//default:
+		//	return DefWindowProc(hWnd, message, wParam, lParam);
+		//}
 		break;
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
@@ -137,14 +137,62 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		EndPaint(hWnd, &ps);
 		break;
 	case WM_TIMER:
-		//uim.RefreshUI(GetTickCount() - t0);
+		uim->RefreshUI(GetTickCount() - t0);
 		t0 = GetTickCount();
 		InvalidateRect(hWnd, &BufferRect, true);
 		break;
 	case WM_DESTROY:
+		uim->InputBuffer.clear();
+		uim->IsInputMode = false;
 		PostQuitMessage(0);
 		break;
 	case WM_ERASEBKGND:
+		break;
+	case WM_KEYDOWN:
+		if(uim->IsInputMode)
+		{
+			char c = wParam;
+			int ctrl = HIBYTE(GetAsyncKeyState(VK_CONTROL));
+			if ((ctrl)&&(wParam=='V')) //Ctrl+V: paste
+			{
+				char* p = NULL;
+				if (OpenClipboard(NULL))
+				{
+					p = (char*)GetClipboardData(CF_TEXT);
+					CloseClipboard();
+				}
+				if(p) uim->InputBuffer = string(p);
+				return 0;
+			}
+		}
+		break;
+	case WM_CHAR:
+		if(uim->IsInputMode)
+		{
+			char c = wParam;
+			int ctrl = HIBYTE(GetAsyncKeyState(VK_CONTROL));
+			switch(c)
+			{
+				case 0x16:
+					break;
+				case 0x0A:  // linefeed 
+				case 0x0D:  // carriage return 
+				case 0x1B:  // escape 
+					if(c==0x1B) uim->InputBuffer.clear();
+					uim->IsInputMode = false;
+					break;
+				case 0x08:  // backspace 
+					if (uim->InputBuffer.size() > 0)
+						uim->InputBuffer.erase(uim->InputBuffer.size()-1);
+					break;
+				default:
+					uim->InputBuffer.push_back(c);
+					break;
+			}
+			uim->RefreshUI(GetTickCount() - t0);
+			t0 = GetTickCount();
+			InvalidateRect(hWnd, &BufferRect, true);
+		}
 		break;
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
@@ -181,12 +229,201 @@ void CWindowUIManager::Internal_Handler(void)
 	return;
 }
 
+
+
+CWindowUIManager::CWindowUIManager()
+{
+	IsInputMode = false;
+}
+string CWindowUIManager::InputString(string prompt)
+{
+	InputModeCaption = prompt;
+	InputBuffer.clear();
+	IsInputMode = true;
+	while(IsInputMode) Sleep(100);
+	return InputBuffer;
+	//char line[128];
+	//printf(prompt.c_str());
+	//if (!fgets(line, sizeof(line),stdin)) return string("");
+	//line[32] = '\0';
+}
+
+int CWindowUIManager::DrawTextOnWindow(int x, int y, string caption, int* width, int* height)
+{
+	RECT rect;
+	rect.left = x;
+	rect.top = y;
+	DrawText(BufferDC, caption.c_str(), -1, &rect, DT_CALCRECT | DT_NOCLIP | DT_LEFT);
+	DrawText(BufferDC, caption.c_str(), -1, &rect, DT_NOCLIP | DT_LEFT);
+
+	if (width)
+		*width = rect.right - rect.left;
+	if(height)
+		*height = rect.bottom - rect.top;
+	return rect.bottom - rect.top;
+}
+
+int CWindowUIManager::DrawGroupCaption(int x, int y, string caption)
+{
+	RECT rect;
+	rect.left = x;
+	rect.top  = y - 1;
+	rect.right = x+BufferRect.right - BufferRect.left;
+	rect.bottom = y + 1;
+	FillRect(BufferDC, &rect, (HBRUSH)GetStockObject(BLACK_BRUSH));
+	return DrawTextOnWindow(x, y+1, caption)+1;
+}
+int CWindowUIManager::PrintVariableLine(int x, int y, VariableCollection::iterator var, double interval)
+{
+	string caption = var->first+": ";
+	int width = 0;
+	int height1 = DrawTextOnWindow(x, y, caption, &width);
+
+	int height2 = var->second->DrawWindow(interval, x+width, y, BufferRect.right - BufferRect.left - width, BufferDC);
+
+	return height1 > height2 ? height1 : height2;
+}
+
+int CWindowUIManager::PrintLogLine(int x, int y, StringList::iterator log )
+{
+	return DrawTextOnWindow(x, y, *log);
+}
+
 void CWindowUIManager::RefreshUI( long delta ) 
 {
-	char text[128];
-	sprintf(text, "Time: %ld", delta);
+	//char text[128];
+	//sprintf(text, "Time: %ld", delta);
 	FillRect(BufferDC, &BufferRect, (HBRUSH) (COLOR_WINDOW+1));
-	TextOut(BufferDC, 0, 0, text, strlen(text));
+	//TextOut(BufferDC, 0, 0, text, strlen(text));
+	double interval = delta /1000.0;
+	int y = 20;
+
+
+	//CUIManager::cache.Damp(GetTickCount());
+	const int pt_sz = 2;
+	int cache_width = BufferRect.right - BufferRect.left;
+	cache_width = cache_width / 100 * 100 / pt_sz;
+
+	for(int cy = 0; cy < CUIManager::cache.segments / cache_width; cy++)
+	{
+		y+=2;
+		for(int cx = 0; cx < cache_width; cx++)
+		{
+			int o = cx+cy*cache_width;
+			if (o >= CUIManager::cache.segments) break;
+			int d = CUIManager::cache.data[o];
+			SetPixel(BufferDC, 2*cx, y, RGB(255, 255 - d, 255 - d));
+			SetPixel(BufferDC, 2*cx+1, y, RGB(255, 255 - d, 255 - d));
+			SetPixel(BufferDC, 2*cx, y+1, RGB(255, 255 - d, 255 - d));
+			SetPixel(BufferDC, 2*cx+1, y+1, RGB(255, 255 - d, 255 - d));
+		}
+	}
+	y+= 16;
+
+	pthread_mutex_lock(&mutex);
+	for(GroupCollection::iterator gi = groups.begin(); gi != groups.end();gi++)
+	{
+		y += 10;
+		VariableCollection& variables = gi->second.variables;
+		StringList& logs = gi->second.logs;
+		int used_lines = 0;
+		//Print Header
+		y += DrawGroupCaption(0, y, gi->second.name);
+		//Print variables
+		for(VariableCollection::iterator var = variables.begin(); var != variables.end(); var++)
+		{
+			y += PrintVariableLine(0, y, var, interval);
+		}
+		//Print logs
+		int max_loglines = group_height - 1 - variables.size();
+		int logid = max_loglines - logs.size();
+		for(StringList::iterator log = logs.begin(); log != logs.end(); log++)
+		{
+			logid++;
+			if (logid <= 0) continue;
+			y += PrintLogLine(0, y, log);
+		}
+	}
+	pthread_mutex_unlock(&mutex);
+
+	//Display InputBox
+	if (IsInputMode)
+	{
+		RECT boundingrect;
+		int width = BufferRect.right - BufferRect.left;
+		int height = BufferRect.bottom - BufferRect.top;
+		boundingrect.left = BufferRect.left + (int)(0.2*width);
+		boundingrect.right = BufferRect.right - (int)(0.2*width);
+		boundingrect.top = BufferRect.top + (int)(0.5*height);
+		boundingrect.bottom = boundingrect.top + 100;
+
+		//Draw bounding box
+		FillRect(BufferDC, &boundingrect, (HBRUSH)GetStockObject(BLACK_BRUSH));
+		boundingrect.left += 3;
+		boundingrect.top  += 3;
+		boundingrect.bottom -= 3;
+		boundingrect.right  -= 3;
+		FillRect(BufferDC, &boundingrect, (HBRUSH)(COLOR_WINDOW+1));
+
+		//Draw Caption
+		int y = boundingrect.top + 10;
+		int x = boundingrect.left + 3;
+		y += DrawTextOnWindow(x, y, InputModeCaption);
+		y += DrawTextOnWindow(x, y, "Press ENTER to continue, ESC to cancel.");
+
+		y+= 16; x+= 8;
+		if (InputBuffer.size() == 0)
+			y += DrawTextOnWindow(x, y, " ");
+		else
+			y += DrawTextOnWindow(x, y, InputBuffer);
+		MoveToEx(BufferDC, x, y+1, NULL);
+		LineTo(BufferDC, x+(int)(0.9*(boundingrect.right - boundingrect.left)), y+1);
+	}
 }
+
+
+
+int IntVariable::DrawWindow(double interval, int x, int y, int width, HDC dc)
+{
+	const int BAR_HEIGHT=16;
+	char text[128];
+	int len = 0;
+	int height = 0;
+	int * value = (int*)var;
+	switch (style)
+	{
+	case Progress:
+		if((*value>=min)&&(*value<=max))
+		{
+			double percentage = ((double)*value - min) / (max-min);
+			len = (int)(width * percentage);
+			RECT rect;
+			rect.left = x;
+			rect.top = y;
+			rect.right = x+width;
+			rect.bottom = y+BAR_HEIGHT;
+			FillRect(BufferDC, &rect, (HBRUSH)(COLOR_ACTIVECAPTION + 1));
+			rect.left = x+len;
+			rect.top = y+1;
+			rect.bottom --;
+			rect.right --;
+			FillRect(BufferDC, &rect, (HBRUSH)(COLOR_WINDOW + 1));
+			height = BAR_HEIGHT;
+		}
+		break;
+	case Raw:
+		sprintf(text, "%d", *value);
+		height = CWindowUIManager::DrawTextOnWindow(x, y, string(text));
+		break;
+	case Gradient:
+		int newvalue = *value;
+		len = sprintf(text, "%d", (int)((newvalue - oldvalue)/interval));
+		oldvalue = newvalue;
+		height = CWindowUIManager::DrawTextOnWindow(x, y, string(text));
+		break;
+	}
+	return height;
+}
+
 
 #endif

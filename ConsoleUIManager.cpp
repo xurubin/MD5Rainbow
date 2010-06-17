@@ -12,7 +12,7 @@ void CConsoleUIManager::PrintVariableLine( VariableCollection::iterator var, dou
 {
 	char line[LINE_WIDTH+1];
 	sprintf(line, "|*%s: ", var->first.c_str());
-	var->second->Draw(interval, LINE_WIDTH-strlen(line), line+strlen(line));
+	var->second->DrawConsole(interval, LINE_WIDTH-strlen(line), line+strlen(line));
 	for(int j=strlen(line); j<LINE_WIDTH-1;j++) line[j] = ' ';
 	line[LINE_WIDTH-1] = '|';
 	line[LINE_WIDTH] = '\0';
@@ -107,4 +107,45 @@ void CConsoleUIManager::Internal_Handler(void)
 		fflush(stdout);
 #endif
 	}
+}
+
+string CConsoleUIManager::InputString(string prompt)
+{
+	char line[128];
+	CUIManager::getSingleton().PrintLn(-1, prompt);
+	if (!fgets(line, sizeof(line),stdin)) return string("");
+	line[32] = '\0';
+	return string(line);
+}
+
+int IntVariable::DrawConsole(double interval, int maxlen,  char * Out)
+{
+	int len = 0;
+	int * value = (int*)var;
+	switch (style)
+	{
+	case Progress:
+		if((*value>=min)&&(*value<=max))
+		{
+			double percentage = ((double)*value - min) / (max-min);
+			len = sprintf(Out, "%4.2f%c", percentage*100.0, '%');
+			int bar_maxlen = maxlen - len - 1;
+			int j;
+			for(j=0;j<(int)(bar_maxlen*percentage);j++)
+				Out[len+j] = '=';
+			Out[len+j] = (bar_maxlen*percentage-j <0.5) ? '-' : '>';
+			Out[len+j+1] = '\0';
+			len = len+j;
+		}
+		break;
+	case Raw:
+		len = sprintf(Out, "%d", *value);
+		break;
+	case Gradient:
+		int newvalue = *value;
+		len = sprintf(Out, "%d", (int)((newvalue - oldvalue)/interval));
+		oldvalue = newvalue;
+		break;
+	}
+	return len;
 }

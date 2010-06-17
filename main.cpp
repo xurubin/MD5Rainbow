@@ -45,14 +45,11 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		table.DisplayDescription();
-		char line[128];
 		do 
 		{
-			CUIManager::getSingleton().PrintLn(-1, "Input target MD5 hash:");
-			if (!fgets(line, sizeof(line),stdin)) break;
-			line[32] = '\0';
-			if (strlen(line) != 32) break;
-			table.Lookup(line, atoi(argv[3]));
+			string hash = CUIManager::getSingleton().InputString("Input MD5 hash string:");
+			if (hash.size() == 0) break;
+			table.Lookup(hash, atoi(argv[3]));
 		} while (true);
 		goto wait_for_terminate;
 	}
@@ -64,6 +61,7 @@ display_usage:
 wait_for_terminate:
 	char c;
 	CUIManager::getSingleton().PrintLn(-1, "Press any key to exit.");
+	printf("Press any key to exit.\n");
 	scanf("%c", &c);
 }
 

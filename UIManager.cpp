@@ -21,13 +21,13 @@ CUIManager::~CUIManager(void)
 CUIManager& CUIManager::getSingleton(void)
 {
 	if (instance == 0)
-		//instance = new CWindowUIManager();
-		instance = new CConsoleUIManager();
+		instance = new CWindowUIManager();
+		//instance = new CConsoleUIManager();
 	return *instance;
 }
 
 CUIManager* CUIManager::instance = 0;
-
+ CacheVisualiser CUIManager::cache;
 void CUIManager::Handler(void)
 {
 	CUIManager::getSingleton().Internal_Handler();
@@ -161,22 +161,23 @@ void CUIManager::ClearLogLines( int group )
 /************************************************************************/
 Variable::Variable(void* variable):var(variable){}
 
-int Variable::Draw( double interval, int maxlen, char * Out )
-{
-	//throw new exception("Invoking abstract method in base class");
-	return 0;
-}
-
 DoubleVariable::DoubleVariable( void* variable ) : Variable(variable)
 {
 	//throw new exception("Not implemented");
 }
 
-int DoubleVariable::Draw( double interval, int maxlen, char * Out )
+int DoubleVariable::DrawConsole( double interval, int maxlen, char * Out )
 {
 	//throw new exception("Not implemented");
 	return 0;
 }
+
+#ifdef WIN32
+int DoubleVariable::DrawWindow(double interval, int x, int y, int width, HDC dc)
+{
+	return 0;
+}
+#endif
 
 IntVariable::IntVariable( void* variable ):Variable(variable)
 {
@@ -184,34 +185,17 @@ IntVariable::IntVariable( void* variable ):Variable(variable)
 	oldvalue = 0;
 }
 
-int IntVariable::Draw( double interval, int maxlen, char * Out )
-{
-	int len = 0;
-	int * value = (int*)var;
-	switch (style)
+void CacheVisualiser::Hit(int position) {
+	int o = ((long long)(position-range_min))*(long long)segments/(long long)(range_max-range_min);
+	if((o >= 0)&&(o < segments)) 
 	{
-	case Progress:
-		if((*value>=min)&&(*value<=max))
-		{
-			double percentage = ((double)*value - min) / (max-min);
-			len = sprintf(Out, "%4.2f%c", percentage*100.0, '%');
-			int bar_maxlen = maxlen - len - 1;
-			int j;
-			for(j=0;j<(int)(bar_maxlen*percentage);j++)
-				Out[len+j] = '=';
-			Out[len+j] = (bar_maxlen*percentage-j <0.5) ? '-' : '>';
-			Out[len+j+1] = '\0';
-			len = len+j;
-			break;
-		}
-	case Raw:
-		len = sprintf(Out, "%d", *value);
-		break;
-	case Gradient:
-		int newvalue = *value;
-		len = sprintf(Out, "%d", (int)((newvalue - oldvalue)/interval));
-		oldvalue = newvalue;
-		break;
+		data[o] += 16; 
+		if (data[o] > 256) data[o] = 256;
 	}
-	return len;
+}
+
+void CacheVisualiser::Damp(long now) { 
+	if ((now-timetag) < 500) return;
+	timetag = now;
+	for(int i=0;i<segments;i++) data[i] /= 2;
 }
