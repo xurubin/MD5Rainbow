@@ -9,7 +9,7 @@
 #define LOADINT(x) x = configfile.GetInt(#x)
 #define LOADSTR(x) x = configfile.GetStr(#x)
 
-CTableManager::CTableManager(void)
+CTableManager::CTableManager(void):Tablename(""), ChainLength(0), TotalTableEntries(0), CompletedEntries(0)
 {
 	pthread_mutex_init(&mutex, NULL);
 	ui = CUIManager::getSingleton().CreateGroup("Table Information");
@@ -222,24 +222,24 @@ void CTableManager::DisplayDescription(void)
 	long long totalhashes = ChainLength; totalhashes *= TotalTableEntries;
 	long long alphabetsize = alphabet.GetAlphabetSize();
 	str2[0] = '\0';
-	sprintf(str2, "Rainbow table: %s\n", Tablename.c_str());
+	sprintf(str2, "Rainbow table: %s", Tablename.c_str());
 	CUIManager::getSingleton().PrintLn(ui,str2);
-	sprintf(str2, "Chain Length: %d\n", ChainLength);
+	sprintf(str2, "Chain Length: %d", ChainLength);
 	CUIManager::getSingleton().PrintLn(ui,str2);
-	sprintf(str2, "Total Entries: %d\n", TotalTableEntries);
+	sprintf(str2, "Total Entries: %d", TotalTableEntries);
 	CUIManager::getSingleton().PrintLn(ui,str2);
-	sprintf(str2, "Covered Hashes: %lld\n", totalhashes);
+	sprintf(str2, "Covered Hashes: %lld", totalhashes);
 	CUIManager::getSingleton().PrintLn(ui,str2);
-	sprintf(str2, "Alphabet size:  %lld\n", alphabetsize);
+	sprintf(str2, "Alphabet size:  %lld", alphabetsize);
 	CUIManager::getSingleton().PrintLn(ui,str2);
-	sprintf(str2, "Coverage ratio: %.3f\n", (double)totalhashes/(double)alphabetsize);
+	sprintf(str2, "Coverage ratio: %.3f", (double)totalhashes/(double)alphabetsize);
 	CUIManager::getSingleton().PrintLn(ui,str2);
-	sprintf(str2, "Success Probability: %.3f\n", GetSuccessProbability());
+	sprintf(str2, "Success Probability: %.3f", GetSuccessProbability());
 	CUIManager::getSingleton().PrintLn(ui,str2);
-	sprintf(str2, "Disk Size: %.3f %s\n", filesize, unit.c_str());
+	sprintf(str2, "Disk Size: %.3f %s", filesize, unit.c_str());
 	CUIManager::getSingleton().PrintLn(ui,str2);
 	
-	sprintf(str2, "Disk File: %s\n", datafile.IsCompletedSorted()? "sorted":"unsorted");
+	sprintf(str2, "Disk File: %s", datafile.IsCompletedSorted()? "sorted":"unsorted");
 	CUIManager::getSingleton().PrintLn(ui,str2);
 	CUIManager::getSingleton().PrintLn(-1,"-----------------------------------------------------------------------------------", false);
 
@@ -272,6 +272,7 @@ bool CTableManager::Lookup(string hash_str, int NumThreads)
 	char hash[32];
 	string hextable("0123456789ABCDEF");
 	CUIManager::getSingleton().PrintLn(-1, string("Searching hash "+hash_str+"..."), false);
+	if (hash_str.length() != 32) return false;
 	for(unsigned int i=0;i<hash_str.length()/2;i++)
 	{	
 		char c = hash_str[2*i];
@@ -310,5 +311,6 @@ bool CTableManager::Lookup(string hash_str, int NumThreads)
 	for(int i=0;i<NumThreads; i++)
 		pthread_join(pids[i], NULL);
 
+	CUIManager::getSingleton().PrintLn(-1, string("Searching hash done."), false);
 	return true;
 }
