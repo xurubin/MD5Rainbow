@@ -243,9 +243,12 @@ int CDiskFile::Lookup_IndexedFile(int i, Index_Type key, Index_Type* startindex)
 	Index_Type mask = ((unsigned long long)1 << files[i].indexfile.GetStartIndexBits())-1;
 	//Acquire mutex
 	while (pthread_mutex_timedlock(&files[i].mutex, &deltatime) != 0) ;
+	CUIManager::cache.range_min = 0;
+	CUIManager::cache.range_max = files[i].NumEntries;
 	fseek(files[i].handle, bytes*offset, SEEK_SET);
 	for(int k=0;k<count;k++)
 	{
+		CUIManager::cache.Hit(offset+k);
 		buf = 0;
 		fread(&buf, bytes, 1, files[i].handle);
 		buf &= mask;
