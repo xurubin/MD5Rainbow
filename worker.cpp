@@ -7,6 +7,7 @@
 #endif
 #include "UIManager.h"
 #include <string.h>
+#include <list>
 #define DBGPRINT hash_buf[str_len] = 0;  \
 printf("Lookup(\"%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x\", 4); // %s\n", \
 (unsigned char)hash_digest[0], (unsigned char)hash_digest[1], \
@@ -89,6 +90,11 @@ void rainbow_generate(GeneratorTaskInfo* task)
 #endif
 
 }
+typedef list<pair<int, Index_Type>> Chain_List;
+Index_Type hash_mask;
+bool Chain_List_Pred(pair<int, Index_Type> first, pair<int, Index_Type> second) { 
+	return (first.second&hash_mask) < (second.second&hash_mask); 
+}
 
 void rainbow_lookup(LookupTaskInfo* task)
 {
@@ -99,6 +105,7 @@ void rainbow_lookup(LookupTaskInfo* task)
 	Index_Type heads[1024];
 	Index_Type hash_range = task->table->alphabet.GetAlphabetSize();//((Index_Type)1 << task->table->alphabet.GetSizeBits()) - 1;
 	int chain_position;
+	hash_mask = task->table->datafile.hash_mask;
 	for(int i=0;i<sizeof(hash_buf);i++) hash_buf[i] = 0;
 
 
@@ -120,6 +127,7 @@ void rainbow_lookup(LookupTaskInfo* task)
 	CUIManager::getSingleton().RegisterIntVariable(falsealarmname, &falsealarms, gid);
 
 	//for(chain_position=task->StartChainLen; chain_position<=task->EndChainLen; chain_position++)
+	Chain_List chains;
 	while((chain_position=task->jobpool->GetNextJob()) >= 0)
 	{
 		progress+= chain_position;
@@ -138,10 +146,17 @@ void rainbow_lookup(LookupTaskInfo* task)
 			*(int *)(hash_buf+56) = str_len*8;
 			CMD5HashReduce::Hash_One_Block(hash_buf, hash_digest);
 		}
-		
+
+		chains.push_back(pair<int,Index_Type>(chain_position, *(Index_Type*)hash_digest));
+//task->table->datafile.Lookup(*(Index_Type*)hash_digest, heads);
+	}
+	chains.sort(Chain_List_Pred);
+	for(Chain_List::iterator cd = chains.begin(); cd != chains.end(); cd++)
+	{
+		chain_position = cd->first;
 		bool found_match = false;
 		//Check if there is a possible match
-		int matches = task->table->datafile.Lookup(*(Index_Type*)hash_digest, heads);
+		int matches = task->table->datafile.Lookup(cd->second, heads);
 		for(int match_i=0;match_i<matches;match_i++)
 		{
 			index = heads[match_i];

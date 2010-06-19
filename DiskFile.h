@@ -36,11 +36,12 @@ public:
 	int AddContent(ChainData* data, int count);
 	int GetEntriesCount(void);
 	int Lookup(Index_Type key, Index_Type* startindex);
+public:
+	static Index_Type index_mask;
+	static Index_Type hash_mask;
 private:
 	static int BytesPerEntry;
 	static int BitsPerIndex;
-	static Index_Type index_mask;
-	static Index_Type hash_mask;
 	string TableName;
 	PartFile files[500];
 	int filecount;

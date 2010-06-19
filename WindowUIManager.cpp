@@ -238,7 +238,7 @@ CWindowUIManager::CWindowUIManager()
 string CWindowUIManager::InputString(string prompt)
 {
 	InputModeCaption = prompt;
-	InputBuffer.clear();
+	InputBuffer="00000000000000000000000000000000";
 	IsInputMode = true;
 	while(IsInputMode) Sleep(100);
 	return InputBuffer;
@@ -296,9 +296,12 @@ void CWindowUIManager::RefreshUI( long delta )
 	FillRect(BufferDC, &BufferRect, (HBRUSH) (COLOR_WINDOW+1));
 	//TextOut(BufferDC, 0, 0, text, strlen(text));
 	double interval = delta /1000.0;
-	int y = 20;
+	int y = 5;
 
-
+	char cacheinfo[255];
+	sprintf(cacheinfo, "CacheSize:%d NumAccess:%d HitRate:%.3f", CUIManager::cache.cachequeue.size(),
+			CUIManager::cache.numaccesses, (double)CUIManager::cache.numhits / CUIManager::cache.numaccesses);
+	y+= DrawTextOnWindow(0, y, cacheinfo);
 	//CUIManager::cache.Damp(GetTickCount());
 	const int pt_sz = 2;
 	int cache_width = BufferRect.right - BufferRect.left;

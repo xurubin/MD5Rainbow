@@ -192,8 +192,20 @@ void CacheVisualiser::Hit(int position) {
 	int o = ((long long)(position-range_min))*(long long)segments/(long long)(range_max-range_min);
 	if((o >= 0)&&(o < segments)) 
 	{
-		data[o] += 16; 
-		if (data[o] > 256) data[o] = 256;
+		data[o] += 255; 
+		if (data[o] > 255) data[o] = 255;
+		numaccesses++;
+		if (cacheset.find(o) != cacheset.end()) numhits++;
+		if (cachequeue.size() > 1000)
+		{
+			int victim = cachequeue.front();
+			cachequeue.pop_front();
+			cacheset.erase(victim);
+		}else
+		{
+			cachequeue.push_back(o);
+			cacheset.insert(o);
+		}
 	}
 }
 

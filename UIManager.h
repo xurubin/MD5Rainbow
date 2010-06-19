@@ -2,6 +2,7 @@
 #include "pthread.h"
 #include <vector>
 #include <deque>
+#include <set>
 #include <map>
 //#include <pair>
 #include <string>
@@ -63,8 +64,12 @@ public:
 	int range_min, range_max;
 	int* data;
 	int segments;
+	int numaccesses;
+	int numhits;
+	set<int> cacheset;
+	deque<int> cachequeue;
 	long timetag;
-	CacheVisualiser() : segments(10000), range_min(0), range_max(0), data(0) { 
+	CacheVisualiser() : segments(5000), range_min(0), range_max(0), data(0), numhits(0), numaccesses(0) { 
 		data = new int[segments];for(int i=0;i<segments;i++) data[i] = 0;
 	}
 	~CacheVisualiser() { delete[] data;}
