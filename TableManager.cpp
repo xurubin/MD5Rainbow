@@ -291,7 +291,7 @@ bool CTableManager::Lookup(string hash_str, int NumThreads)
 	CUIManager::getSingleton().ClearGroup(gid);
 	bool terminating = false;
 	CLookupJobPool lookupjob;
-	lookupjob.SetJobs(0, ChainLength-1);
+	lookupjob.SetLookupJobs(0, ChainLength-1);
 	for(int i=0;i<NumThreads;i++)
 	{
 		tasks[i].WorkerID = i;
@@ -300,10 +300,10 @@ bool CTableManager::Lookup(string hash_str, int NumThreads)
 		tasks[i].UIGroup = gid;
 		tasks[i].terminating = &terminating;
 		tasks[i].jobpool = &lookupjob;
-		if (i==0)
-			tasks[i].StartChainLen = 0;
-		else
+		if (i>0)
 			tasks[i].StartChainLen = tasks[i-1].EndChainLen + 1;
+		else
+			tasks[i].StartChainLen = 0;
 		tasks[i].EndChainLen = (int)(sqrt( ((double)i+1)/(double)NumThreads ) * (ChainLength-1));
 
 		pthread_create(&pids[i], 0, (void *(*)(void *))rainbow_lookup, &tasks[i]);

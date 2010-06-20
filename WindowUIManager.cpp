@@ -238,9 +238,9 @@ CWindowUIManager::CWindowUIManager()
 string CWindowUIManager::InputString(string prompt)
 {
 	InputModeCaption = prompt;
-	InputBuffer="00000000000000000000000000000000";
+	InputBuffer="c457bc8dbdcd7f5be129d40f9d7e12d6";
 	IsInputMode = true;
-	while(IsInputMode) Sleep(100);
+	while(IsInputMode) Sleep(200);
 	return InputBuffer;
 	//char line[128];
 	//printf(prompt.c_str());

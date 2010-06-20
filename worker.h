@@ -2,17 +2,26 @@
 #include "common.h"
 #include "TableManager.h"
 #include "pthread.h"
+#include <vector>
+
+typedef vector<pair<int, Index_Type>> ChainData_List;
+bool ChainData_List_Pred(pair<int, Index_Type> first, pair<int, Index_Type> second);
 
 class CLookupJobPool
 {
 public:
 	CLookupJobPool();
 	~CLookupJobPool();
-	void SetJobs(int min, int max);
-	int GetNextJob();
+	void SetLookupJobs(int min, int max);
+	int GetNextChain();
+	void SubmitChainData(int chain_offset, Index_Type finish_hash);
+	int GetNextChainHeads(CDiskFile& datafile, int* start_offset, Index_Type* start_indexes);
 private:
 	pthread_mutex_t mutex;
-	int v, min, max;
+	volatile int prelookup;
+	ChainData_List chaindata;
+	unsigned int chaindata_pointer;
+	int chain_v, chain_min, chain_max;
 	int progress;
 	int gid;
 };
