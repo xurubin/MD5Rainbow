@@ -299,27 +299,29 @@ void CWindowUIManager::RefreshUI( long delta )
 	int y = 5;
 
 	char cacheinfo[255];
-	sprintf(cacheinfo, "CacheSize:%d NumAccess:%d HitRate:%.3f", CUIManager::cache.cachequeue.size(),
-			CUIManager::cache.numaccesses, (double)CUIManager::cache.numhits / CUIManager::cache.numaccesses);
+	sprintf(cacheinfo, "CacheSize:%d NumAccess:%d NumHits:%d", CUIManager::cache.cachequeue.size(),
+			CUIManager::cache.numaccesses, CUIManager::cache.numhits);
 	y+= DrawTextOnWindow(0, y, cacheinfo);
 	//CUIManager::cache.Damp(GetTickCount());
 	const int pt_sz = 2;
 	int cache_width = BufferRect.right - BufferRect.left;
 	cache_width = cache_width / 100 * 100 / pt_sz;
 
-	for(int cy = 0; cy < CUIManager::cache.segments / cache_width; cy++)
+	Rectangle(BufferDC, 1, y, 1+cache_width*2+2, y+(CUIManager::cache.segments+cache_width-1)/cache_width*2+2);
+	y++;
+	for(int cy = 0; cy < (CUIManager::cache.segments+cache_width-1) / cache_width; cy++)
 	{
-		y+=2;
 		for(int cx = 0; cx < cache_width; cx++)
 		{
 			int o = cx+cy*cache_width;
 			if (o >= CUIManager::cache.segments) break;
 			int d = CUIManager::cache.data[o];
-			SetPixel(BufferDC, 2*cx, y, RGB(255, 255 - d, 255 - d));
-			SetPixel(BufferDC, 2*cx+1, y, RGB(255, 255 - d, 255 - d));
-			SetPixel(BufferDC, 2*cx, y+1, RGB(255, 255 - d, 255 - d));
-			SetPixel(BufferDC, 2*cx+1, y+1, RGB(255, 255 - d, 255 - d));
+			SetPixel(BufferDC, 2+2*cx, y, RGB(255, 255 - d, 255 - d));
+			SetPixel(BufferDC, 2+2*cx+1, y, RGB(255, 255 - d, 255 - d));
+			SetPixel(BufferDC, 2+2*cx, y+1, RGB(255, 255 - d, 255 - d));
+			SetPixel(BufferDC, 2+2*cx+1, y+1, RGB(255, 255 - d, 255 - d));
 		}
+		y+=2;
 	}
 	y+= 16;
 
