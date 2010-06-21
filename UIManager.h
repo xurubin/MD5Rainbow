@@ -14,13 +14,13 @@ using namespace std;
 class Variable
 {
 public:
-	Variable(void* variable);
+	Variable(volatile void* variable);
 	virtual int DrawConsole(double interval, int maxlen, char * Out)=0;
 #ifdef WIN32
 	virtual int DrawWindow(double interval, int x, int y, int width, HDC dc)=0;
 #endif
 protected:
-	void* var;
+	volatile void* var;
 };
 
 enum VariableDisplayStyle { Raw, Progress, Gradient};
@@ -28,7 +28,7 @@ enum VariableDisplayStyle { Raw, Progress, Gradient};
 class IntVariable : public Variable
 {
 public:
-	IntVariable(void* variable);
+	IntVariable(volatile void* variable);
 	virtual int DrawConsole(double interval, int maxlen, char * Out);
 #ifdef WIN32
 	virtual int DrawWindow(double interval, int x, int y, int width, HDC dc);
@@ -41,7 +41,7 @@ private:
 class DoubleVariable : public Variable
 {
 public:
-	DoubleVariable(void* variable);
+	DoubleVariable(volatile void* variable);
 	virtual int DrawConsole(double interval, int maxlen, char * Out);
 #ifdef WIN32
 	virtual int DrawWindow(double interval, int x, int y, int width, HDC dc);
@@ -100,8 +100,8 @@ public:
 	void ClearGroup(int id);
 	int RemoveGroup(int id);
 	Variable* RegisterVariable(string name, int group, Variable* v);
-	IntVariable* RegisterIntVariable(string name, int* var, int group);
-	DoubleVariable* RegisterDoubleVariable(string name, double* var, int group);
+	IntVariable* RegisterIntVariable(string name, volatile int* var, int group);
+	DoubleVariable* RegisterDoubleVariable(string name, volatile double* var, int group);
 	void UnregisterVariable(int group, string name);
 
 	void PrintLn(int group, string line, bool raw = true);

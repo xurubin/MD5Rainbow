@@ -42,13 +42,13 @@ int CUIManager::allocate_handle( void )
 	return max_handle++;
 }
 
-IntVariable* CUIManager::RegisterIntVariable( string name, int* var, int group )
+IntVariable* CUIManager::RegisterIntVariable( string name, volatile int* var, int group )
 {
 	IntVariable* v = new IntVariable(var);
 	return (IntVariable*)RegisterVariable(name, group, v);
 }
 
-DoubleVariable* CUIManager::RegisterDoubleVariable( string name, double* var, int group )
+DoubleVariable* CUIManager::RegisterDoubleVariable( string name, volatile double* var, int group )
 {
 	DoubleVariable* v = new DoubleVariable(var);
 	return (DoubleVariable*)RegisterVariable(name, group, v);
@@ -162,9 +162,9 @@ void CUIManager::ClearLogLines( int group )
 /************************************************************************/
 /*    Variable -related implementation                                  */
 /************************************************************************/
-Variable::Variable(void* variable):var(variable){}
+Variable::Variable(volatile void* variable):var(variable){}
 
-DoubleVariable::DoubleVariable( void* variable ) : Variable(variable)
+DoubleVariable::DoubleVariable(volatile void* variable ) : Variable(variable)
 {
 	//throw new exception("Not implemented");
 }
@@ -182,7 +182,7 @@ int DoubleVariable::DrawWindow(double interval, int x, int y, int width, HDC dc)
 }
 #endif
 
-IntVariable::IntVariable( void* variable ):Variable(variable)
+IntVariable::IntVariable(volatile void* variable ):Variable(variable)
 {
 	style = Raw;
 	oldvalue = 0;
@@ -194,17 +194,18 @@ void CacheVisualiser::Hit(int position) {
 	{
 		data[o] += 255; 
 		if (data[o] > 255) data[o] = 255;
+
 		numaccesses++;
-		if (cacheset.find(o) != cacheset.end()) numhits++;
-		if (cachequeue.size() > 1000)
+		if (cacheset.find(position) != cacheset.end()) numhits++;
+		if (cachequeue.size() > 100)
 		{
 			int victim = cachequeue.front();
 			cachequeue.pop_front();
 			cacheset.erase(victim);
 		}else
 		{
-			cachequeue.push_back(o);
-			cacheset.insert(o);
+			cachequeue.push_back(position);
+			cacheset.insert(position);
 		}
 	}
 }
