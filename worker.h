@@ -4,7 +4,7 @@
 #include "pthread.h"
 #include <vector>
 
-typedef vector<pair<int, Index_Type>> ChainData_List;
+typedef vector< pair<int, Index_Type> > ChainData_List;
 bool ChainData_List_Pred(pair<int, Index_Type> first, pair<int, Index_Type> second);
 
 class CLookupJobPool
