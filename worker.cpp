@@ -132,7 +132,7 @@ void rainbow_lookup(LookupTaskInfo* task)
 	SetThreadPriority(GetCurrentThread(), THREAD_BASE_PRIORITY_IDLE);
 #endif
 	int gid = task->UIGroup;
-	int progress = 0;
+	//int progress = 0;
 	//char progressname[20]; 
 	//sprintf(progressname, "Progress%d", task->WorkerID);
 	//IntVariable* visualiser = CUIManager::getSingleton().RegisterIntVariable(progressname, &progress, gid);
@@ -149,7 +149,7 @@ void rainbow_lookup(LookupTaskInfo* task)
 	while((chain_position=task->jobpool->GetNextChain()) >= 0)
 	{
 		// Check if the requested hash is at position chain_position of some hash chain.
-		progress+= chain_position;
+		//progress+= chain_position;
 		for(int j=0;j<sizeof(hash_digest);j++) hash_digest[j] = task->hash[j];
 
 		// Assume it's at chain_position, first find the hypothetical finish hash
@@ -257,10 +257,15 @@ int CLookupJobPool::GetNextChainHeads(CDiskFile& datafile, int* start_offset, In
 	pair<int,Index_Type> *d = NULL;
 	pthread_mutex_lock(&mutex);
 	if (chaindata_pointer < chaindata.size())
+	{
 		d = &(chaindata[chaindata_pointer++]);
+		progress +=  d->first;
+	}
 	pthread_mutex_unlock(&mutex);
 	if (d == NULL)
+	{
 		return -1;
+	}
 	else
 	{
 		*start_offset = d->first;
@@ -271,12 +276,13 @@ int CLookupJobPool::GetNextChainHeads(CDiskFile& datafile, int* start_offset, In
 void CLookupJobPool::SubmitChainData( int chain_offset, Index_Type finish_hash )
 {
 	pthread_mutex_lock(&mutex);
-	chaindata.push_back(pair<int,Index_Type>(chain_offset, finish_hash));
+	chaindata.push_back(pair<int,Index_Type>(chain_offset, finish_hash&hash_mask));
 	if (chaindata.size() == chain_max - chain_min + 1)
 	{
 		sort(chaindata.begin(), chaindata.end(), ChainData_List_Pred);
-		prelookup = 0;
+		progress = 0;
 		chaindata_pointer = 0;
+		prelookup = 0;
 	}
 	pthread_mutex_unlock(&mutex);
 

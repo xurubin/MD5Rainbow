@@ -22,7 +22,7 @@ private:
 	ChainData_List chaindata;
 	unsigned int chaindata_pointer;
 	int chain_v, chain_min, chain_max;
-	int progress;
+	volatile int progress;
 	int gid;
 };
 
