@@ -69,11 +69,12 @@ public:
 	set<int> cacheset;
 	deque<int> cachequeue;
 	long timetag;
-	CacheVisualiser() : segments(5000), range_min(0), range_max(0), data(0), numhits(0), numaccesses(0) { 
+	CacheVisualiser() : segments(3000), range_min(0), range_max(0), data(0), numhits(0), numaccesses(0) { 
 		data = new int[segments];for(int i=0;i<segments;i++) data[i] = 0;
 	}
 	~CacheVisualiser() { delete[] data;}
 	void Hit(int position);
+	void Clear();
 	void Damp(long now);
 };
 class CUIManager

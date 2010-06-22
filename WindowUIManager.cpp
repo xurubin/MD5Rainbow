@@ -298,11 +298,12 @@ void CWindowUIManager::RefreshUI( long delta )
 	double interval = delta /1000.0;
 	int y = 5;
 
-	char cacheinfo[255];
-	sprintf(cacheinfo, "CacheSize:%d NumAccess:%d NumHits:%d", CUIManager::cache.cachequeue.size(),
-			CUIManager::cache.numaccesses, CUIManager::cache.numhits);
-	y+= DrawTextOnWindow(0, y, cacheinfo);
+	//char cacheinfo[255];
+	//sprintf(cacheinfo, "CacheSize:%d NumAccess:%d NumHits:%d", CUIManager::cache.cachequeue.size(),
+	//		CUIManager::cache.numaccesses, CUIManager::cache.numhits);
+	//y+= DrawTextOnWindow(0, y, cacheinfo);
 	//CUIManager::cache.Damp(GetTickCount());
+	y+= DrawTextOnWindow(0, y, "Disk Access Pattern:");
 	const int pt_sz = 2;
 	int cache_width = BufferRect.right - BufferRect.left;
 	cache_width = cache_width / 100 * 100 / pt_sz;
@@ -324,7 +325,7 @@ void CWindowUIManager::RefreshUI( long delta )
 		}
 		y+=2;
 	}
-	y+= 16;
+	y+= 8;
 
 	pthread_mutex_lock(&mutex);
 	for(GroupCollection::iterator gi = groups.begin(); gi != groups.end();gi++)

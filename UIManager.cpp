@@ -192,21 +192,22 @@ void CacheVisualiser::Hit(int position) {
 	int o = ((long long)(position-range_min))*(long long)segments/(long long)(range_max-range_min);
 	if((o >= 0)&&(o < segments)) 
 	{
-		data[o] += 255; 
-		if (data[o] > 255) data[o] = 255;
+		data[o] = 255;
+		//data[o] += 255; 
+		//if (data[o] > 255) data[o] = 255;
 
-		numaccesses++;
-		if (cacheset.find(position) != cacheset.end()) numhits++;
-		if (cachequeue.size() > 100)
-		{
-			int victim = cachequeue.front();
-			cachequeue.pop_front();
-			cacheset.erase(victim);
-		}else
-		{
-			cachequeue.push_back(position);
-			cacheset.insert(position);
-		}
+		//numaccesses++;
+		//if (cacheset.find(position) != cacheset.end()) numhits++;
+		//if (cachequeue.size() > 100)
+		//{
+		//	int victim = cachequeue.front();
+		//	cachequeue.pop_front();
+		//	cacheset.erase(victim);
+		//}else
+		//{
+		//	cachequeue.push_back(position);
+		//	cacheset.insert(position);
+		//}
 	}
 }
 
@@ -214,4 +215,9 @@ void CacheVisualiser::Damp(long now) {
 	if ((now-timetag) < 500) return;
 	timetag = now;
 	for(int i=0;i<segments;i++) data[i] /= 2;
+}
+
+void CacheVisualiser::Clear()
+{
+	for(int i=0;i<segments;i++) data[i] = 0;
 }

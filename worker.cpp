@@ -126,7 +126,7 @@ void rainbow_lookup(LookupTaskInfo* task)
 	int chain_position;
 	hash_mask = task->table->datafile.hash_mask;
 	for(int i=0;i<sizeof(hash_buf);i++) hash_buf[i] = 0;
-
+	CUIManager::cache.Clear();
 
 #ifdef WIN32
 	SetThreadPriority(GetCurrentThread(), THREAD_BASE_PRIORITY_IDLE);
