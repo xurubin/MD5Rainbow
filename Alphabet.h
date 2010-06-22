@@ -3,6 +3,7 @@
 #include <string>
 using namespace std;
 
+#define PrecomputedSubAlphabetSize 2
 struct InvididualAlphabet
 {
 	Index_Type wordcount;
@@ -11,6 +12,8 @@ struct InvididualAlphabet
 	int min_length;
 	int max_length;
 	Index_Type wordcount_table[16]; 
+	char PrecomputeSubAlphabet[36*36][PrecomputedSubAlphabetSize];
+	int PrecomputeSubAlphabetRadix;
 };
 
 class CAlphabet

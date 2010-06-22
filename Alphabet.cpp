@@ -29,16 +29,37 @@ int CAlphabet::Lookup(Index_Type index, char* result)
 	while (index >= alphabet[ind].wordcount_table[len])
 		index -= alphabet[ind].wordcount_table[len++];
 
-	unsigned int radix = alphabet[ind].charset_len;
-	char* radixtable = alphabet[ind].charset;
-	//Pin index to alphabet[ind] with length len
-	for(int i=0;i<len;i++)
+
+	unsigned int radix = alphabet[ind].PrecomputeSubAlphabetRadix;
+	int pt = 0;
+	//First fill result with precomputed subalphabet.
+	for(int i=0;i<len/PrecomputedSubAlphabetSize;i++)
 	{
 		unsigned int x = index % radix;
-		index = index / radix;
-		result[i] = radixtable[x];
+		index   = index / radix;
+		for(int j=0;j<PrecomputedSubAlphabetSize;j++)
+			result[pt++] = alphabet[ind].PrecomputeSubAlphabet[x][j];
 	}
-	result[len] = '\0';
+	radix = alphabet[ind].charset_len;
+	//Process remaining positions in result.
+	for(;pt<len;pt++)
+	{
+		unsigned int x = index % radix;
+		index   = index / radix;
+		result[pt] = alphabet[ind].charset[x];
+	}
+	result[pt] = '\0';
+
+	//unsigned int radix = alphabet[ind].charset_len;
+	//char* radixtable = alphabet[ind].charset;
+	////Pin index to alphabet[ind] with length len
+	//for(int i=0;i<len;i++)
+	//{
+	//	unsigned int x = index % radix;
+	//	index   = index / radix;
+	//	result[i] = radixtable[x];
+	//}
+	//result[len] = '\0';
 	return len;
 }
 
@@ -95,6 +116,24 @@ bool CAlphabet::Parse(string desc)
 		alphabet[alphabet_len].wordcount = 0;
 		for(int i=alphabet[alphabet_len].min_length; i<= alphabet[alphabet_len].max_length;i++)
 			alphabet[alphabet_len].wordcount += alphabet[alphabet_len].wordcount_table[i];
+
+		//Precompute SubAlphabet - Radix
+		alphabet[alphabet_len].PrecomputeSubAlphabetRadix = alphabet[alphabet_len].charset_len;
+		for(int i=1; i<PrecomputedSubAlphabetSize; i++)
+			alphabet[alphabet_len].PrecomputeSubAlphabetRadix *= alphabet[alphabet_len].charset_len;
+
+		//Precompute SubAlphabet - string
+		for(int i=0;i<alphabet[alphabet_len].PrecomputeSubAlphabetRadix;i++)
+		{
+			//Compute the substring whose index is i.
+			int index = i;
+			for(int j=0;j<PrecomputedSubAlphabetSize;j++)
+			{
+				alphabet[alphabet_len].PrecomputeSubAlphabet[i][j] = 
+					alphabet[alphabet_len].charset[index % alphabet[alphabet_len].charset_len];
+				index /= alphabet[alphabet_len].charset_len;
+			}
+		}
 
 		alphabet_len++;
 	}
