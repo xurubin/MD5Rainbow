@@ -86,7 +86,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	SelectObject(BufferDC, BufferBitmap);
 	ReleaseDC(hWnd, dc);
 
-	SetTimer(hWnd, 1, 200, NULL);
+	SetTimer(hWnd, 1, 250, NULL);
 
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
@@ -104,12 +104,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //  WM_DESTROY	- post a quit message and return
 //
 //
+long t0 = 0;
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId, wmEvent;
 	PAINTSTRUCT ps;
 	HDC hdc;
-	long t0 = 0;
 	CWindowUIManager* uim = (CWindowUIManager*)(&CUIManager::getSingleton());
 
 	switch (message)
@@ -309,17 +309,18 @@ void CWindowUIManager::RefreshUI( long delta )
 
 	Rectangle(BufferDC, 1, y, 1+cache_width*2+2, y+(CUIManager::cache.segments+cache_width-1)/cache_width*2+2);
 	y++;
+	int o = 0;
 	for(int cy = 0; cy < (CUIManager::cache.segments+cache_width-1) / cache_width; cy++)
 	{
 		for(int cx = 0; cx < cache_width; cx++)
 		{
-			int o = cx+cy*cache_width;
 			if (o >= CUIManager::cache.segments) break;
-			int d = CUIManager::cache.data[o];
-			SetPixel(BufferDC, 2+2*cx, y, RGB(255, 255 - d, 255 - d));
-			SetPixel(BufferDC, 2+2*cx+1, y, RGB(255, 255 - d, 255 - d));
-			SetPixel(BufferDC, 2+2*cx, y+1, RGB(255, 255 - d, 255 - d));
-			SetPixel(BufferDC, 2+2*cx+1, y+1, RGB(255, 255 - d, 255 - d));
+			int d = CUIManager::cache.data[o++];
+			COLORREF color = RGB(255, 255 - d, 255 - d);
+			SetPixelV(BufferDC, 2+2*cx, y, color);
+			SetPixelV(BufferDC, 2+2*cx+1, y, color);
+			SetPixelV(BufferDC, 2+2*cx, y+1, color);
+			SetPixelV(BufferDC, 2+2*cx+1, y+1, color);
 		}
 		y+=2;
 	}
