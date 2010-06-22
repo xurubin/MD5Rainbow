@@ -32,7 +32,7 @@ void ComputeHashChain(CAlphabet& alphabet, Index_Type hash_range, int start_offs
 	Index_Type index;
 	int str_len =0;
 	memset(hash_buf, 0, sizeof(hash_buf));
-	for(int i=0;i<16;i++) hash_digest[i] = start_hash[i];
+	memcpy(hash_digest, start_hash, sizeof(hash_digest));
 
 	for(unsigned int i=0;i < chain_length;i++)
 	{
@@ -47,7 +47,7 @@ void ComputeHashChain(CAlphabet& alphabet, Index_Type hash_range, int start_offs
 		CMD5HashReduce::Hash_One_Block(hash_buf, hash_digest);
 		/*DBGPRINT*/
 	}
-	for(int i=0;i<16;i++) final_hash[i] = hash_digest[i];
+	memcpy(final_hash, hash_digest, sizeof(hash_digest));
 	if(last_str)
 	{
 		strncpy(last_str, hash_buf, str_len);
@@ -145,6 +145,11 @@ void rainbow_lookup(LookupTaskInfo* task)
 	sprintf(falsealarmname, "False Alarm %d", task->WorkerID);
 	CUIManager::getSingleton().RegisterIntVariable(falsealarmname, &falsealarms, gid);
 
+	int chainspeed = 0;
+	char chainspeedname[20];
+	sprintf(chainspeedname, "Iterate Speed %d", task->WorkerID);
+	CUIManager::getSingleton().RegisterIntVariable(chainspeedname, &chainspeed, gid)->style=Gradient;
+
 	//for(chain_position=task->StartChainLen; chain_position<=task->EndChainLen; chain_position++)
 	while((chain_position=task->jobpool->GetNextChain()) >= 0)
 	{
@@ -154,7 +159,7 @@ void rainbow_lookup(LookupTaskInfo* task)
 
 		// Assume it's at chain_position, first find the hypothetical finish hash
 		ComputeHashChain(task->table->alphabet, hash_range, task->table->ChainLength-chain_position, chain_position, hash_digest, hash_digest);
-
+		chainspeed += chain_position;
 		task->jobpool->SubmitChainData(chain_position, *(Index_Type*)hash_digest);
 	}
 
@@ -178,7 +183,7 @@ void rainbow_lookup(LookupTaskInfo* task)
 			*(int *)(hash_buf+56) = str_len*8;
 			CMD5HashReduce::Hash_One_Block(hash_buf, hash_digest);
 			ComputeHashChain(task->table->alphabet, hash_range, 1, task->table->ChainLength-chain_position-1, hash_digest, hash_digest, hash_buf);
-
+			chainspeed +=  task->table->ChainLength-chain_position-1;
 			//Check if it's a false positive
 			bool falsepositive = false;
 			for(int j=0;j<16;j++)
@@ -202,7 +207,7 @@ void rainbow_lookup(LookupTaskInfo* task)
 		}
 		if (found_match) break;
 	}
-	//CUIManager::getSingleton().UnregisterVariable(gid, progressname);
+	CUIManager::getSingleton().UnregisterVariable(gid, chainspeedname);
 	CUIManager::getSingleton().UnregisterVariable(gid, falsealarmname);
 }
 
