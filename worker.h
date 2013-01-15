@@ -1,4 +1,5 @@
 #pragma once
+
 #include "common.h"
 #include "TableManager.h"
 #include "pthread.h"
